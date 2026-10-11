@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>군밤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--safe-b:env(safe-area-inset-bottom,0px);--joy-l:clamp(14px,4vw,42px);--joy-b:clamp(18px,5vh,42px);--joy-s:clamp(128px,22vw,160px);}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;font-family:'Noto Sans KR',system-ui,sans-serif;color:#eee;}
+canvas{display:block;position:fixed;inset:0;}
+body.menu #crosshair,body.menu #charge-wrap,body.menu #remote-ui,body.menu #controls,body.menu #hit-flash,body.menu #low-hp-vignette,body.menu #kill-banner{display:none!important;}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:20;}
+#hp-wrap{position:absolute;top:14px;left:14px;width:120px;height:8px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden;}
+#hp-fg{height:100%;width:100%;background:#fff;transition:width .15s linear;}
+#hp-taken{position:absolute;top:26px;left:14px;width:60px;height:30px;}
+.taken-num{position:absolute;left:0;top:0;font-size:16px;font-weight:700;color:#ff5555;text-shadow:0 0 4px #000;animation:takenAnim .9s forwards;}
+@keyframes takenAnim{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(18px);}}
+#room-info{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:12px;color:#999;}
+#leaderboard{position:absolute;top:12px;right:10px;width:min(160px,calc(100vw - 20px));padding:4px 2px;background:transparent;border:0;border-radius:0;font-size:11px;line-height:1.3;overflow:hidden;}
+#leaderboard-list{display:grid;grid-template-rows:repeat(5,auto);grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);column-gap:5px;row-gap:2px;width:100%;}
+#leaderboard .lb-row{display:grid;grid-template-columns:22px minmax(0,1fr) 24px;align-items:center;gap:4px;min-width:0;padding:2px 2px;color:#fff;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.14);}
+#leaderboard .lb-rank{color:#999;text-align:right;}
+#leaderboard .lb-name{overflow:hidden;text-overflow:ellipsis;border-left:1px solid rgba(255,255,255,.28);padding-left:5px;}
+#leaderboard .lb-kills{color:#fff;text-align:right;border-left:1px solid rgba(255,255,255,.28);padding-left:5px;font-weight:700;}
+#leaderboard .lb-row.me{color:#ffe27a;font-weight:700;}
+#leaderboard .lb-row.me .lb-rank,
+#leaderboard .lb-row.me .lb-name,
+#leaderboard .lb-row.me .lb-kills{color:#ffe27a;font-weight:700;}
+#killfeed{position:absolute;top:50px;left:14px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;max-width:min(52vw,280px);}
+.kf-item{font-size:12px;color:#fff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:4px;}
+#remote-ui{position:absolute;inset:0;pointer-events:none;z-index:22;}
+.remote-ui{position:absolute;left:0;top:0;text-align:center;will-change:transform;}
+.remote-name{font-size:10px;color:#fff;text-shadow:0 0 4px #000;margin-bottom:2px;}
+.remote-hp{width:44px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden;margin:0 auto;}
+.remote-hp>div{height:100%;background:#fff;}
+.remote-charge{width:44px;height:3px;background:rgba(255,255,255,.2);margin:2px auto 0;display:none;}
+.remote-charge>div{height:100%;width:0%;background:#fff;}
+#low-hp-vignette{position:fixed;inset:0;pointer-events:none;z-index:16;opacity:0;background:transparent;box-shadow:inset 0 0 42px 16px rgba(255,0,0,.95);transition:opacity .18s ease;}
+#kill-banner{position:fixed;top:16%;left:50%;transform:translate(-50%,-20px) scale(.9);padding:8px 20px;border-radius:10px;background:rgba(120,0,0,.78);border:2px solid rgba(255,100,100,.85);color:#fff;font-size:clamp(22px,5vw,38px);font-weight:700;text-shadow:0 2px 8px #000;opacity:0;pointer-events:none;z-index:45;transition:opacity .12s,transform .12s;}
+#kill-banner.show{opacity:1;transform:translate(-50%,0) scale(1);} 
+#hit-flash{position:fixed;inset:0;background:rgba(255,0,0,0);pointer-events:none;z-index:15;transition:background .08s;}
+#hit-flash.flash{background:rgba(255,0,0,.3);}
+#crosshair{position:fixed;top:50%;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff;opacity:.85;pointer-events:none;z-index:18;}
+#charge-wrap{position:fixed;top:calc(50% + 28px);left:50%;transform:translateX(-50%);width:110px;height:8px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.6);border-radius:5px;overflow:hidden;display:none;z-index:18;pointer-events:none;}
+#charge-fg{height:100%;width:0%;background:#fff;}
+.hit-dir{position:fixed;top:50%;left:50%;width:190px;height:190px;margin:-95px 0 0 -95px;border-radius:50%;border:7px solid transparent;border-top-color:rgba(255,40,40,.9);pointer-events:none;z-index:19;filter:drop-shadow(0 0 6px rgba(255,0,0,.8));}
+.dmg-num{position:fixed;pointer-events:none;font-size:16px;font-weight:700;color:#fff;text-shadow:0 0 6px #000;z-index:25;animation:floatUp .8s forwards;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-44px);}}
+#controls{position:fixed;inset:0;pointer-events:none;z-index:30;display:none;}
+#joy-area{position:absolute;left:var(--joy-l);bottom:var(--joy-b);width:var(--joy-s);height:var(--joy-s);pointer-events:auto;touch-action:none;}
+#joy-base{width:100%;height:100%;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.35);position:relative;}
+#joy-knob{width:31%;height:31%;border-radius:50%;background:rgba(255,255,255,.5);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+.action-btn{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-family:inherit;font-weight:700;pointer-events:auto;user-select:none;touch-action:none;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.45);}
+.action-btn:active{background:rgba(255,255,255,.3);}
+.btn-icon{font-size:clamp(20px,4vw,28px);line-height:1;}
+#throw-btn{right:clamp(16px,4vw,44px);bottom:clamp(18px,5vh,42px);width:clamp(88px,15vw,112px);height:clamp(88px,15vw,112px);}
+#jump-btn{right:clamp(124px,20vw,170px);bottom:clamp(22px,5vh,48px);width:62px;height:62px;}
+#punch-btn{right:clamp(30px,6vw,60px);bottom:clamp(130px,22vh,170px);width:62px;height:62px;}
+
+/* ── 메인 화면 ── */
+#menu{position:fixed;inset:0;z-index:50;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 24px) 16px calc(var(--safe-b) + 64px);}
+#menu-title{font-size:clamp(48px,13vw,76px);font-weight:700;letter-spacing:8px;text-shadow:0 2px 24px rgba(0,0,0,.8);}
+#menu-bottom{position:fixed;left:50%;bottom:calc(var(--safe-b) + 18px);transform:translateX(-50%);width:min(760px,calc(100% - 32px));display:flex;flex-direction:column;gap:12px;align-items:center;}
+#menu-msg{font-size:14px;color:#ddd;min-height:18px;text-shadow:0 1px 8px #000;text-align:center;}
+#menu-msg.death-message{font-size:clamp(24px,6vw,42px);font-weight:700;color:#ff3030;text-shadow:0 0 8px #000,0 0 18px rgba(255,0,0,.55);}
+#server-counts{margin-top:4px;color:#aaa;font-size:10px;text-align:center;white-space:nowrap;}
+#menu-stats{position:absolute;top:12px;right:calc(10px + min(160px,calc(100vw - 20px)) + 4px);width:max-content;margin:0;padding:4px 0 0;color:#bbb;font-size:10px;line-height:1.65;text-align:left;white-space:nowrap;text-shadow:0 1px 5px #000;}
+#menu-stats .stat-line{display:flex;justify-content:flex-start;gap:6px;overflow:hidden;}
+#menu-stats strong{color:#ffe27a;font-weight:700;overflow:hidden;text-overflow:ellipsis;}
+#menu-stats .stat-name{color:#fff;font-weight:400;}
+#menu-stats .stat-divider{margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.14);}
+body:not(.menu) #menu-stats{display:none;}
+#top-kills{margin-top:7px;padding-top:5px;border-top:1px solid rgba(255,255,255,.14);font-size:10px;line-height:1.55;text-align:center;white-space:normal;overflow:hidden;width:100%;max-width:100%;}
+#top-kills .top-title{color:#999;margin-bottom:1px;text-align:center;}
+#top-kills .top-row{display:flex;align-items:center;justify-content:space-between;gap:4px;width:100%;min-width:0;margin:0;white-space:nowrap;}
+#top-kills .top-row>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+#top-kills .top-value{flex:0 0 auto;color:#fff;font-weight:700;}
+#top-kills .top-row.me .top-value{color:#ffe27a;}
+#perf-stats{position:fixed;right:calc(6px + 54px);bottom:5px;color:rgba(255,255,255,.58);font:10px/1.2 monospace;z-index:35;pointer-events:none;text-align:right;}
+#menu-members{font-size:12px;color:#aaa;min-height:16px;text-shadow:0 1px 8px #000;text-align:center;}
+#menu-row{pointer-events:auto;display:flex;gap:10px;align-items:stretch;width:100%;}
+.m-box{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;color:#eee;font-family:inherit;}
+.m-box label,.m-box .lbl{font-size:10px;color:#999;}
+.m-box input,.m-box select{width:100%;background:transparent;border:none;outline:none;color:#fff;font:inherit;font-size:15px;font-weight:700;}
+.m-box select option{background:#111;color:#fff;}
+#name-box{flex:1.2;}
+#play-btn{flex:1.4;border:none;border-radius:12px;background:#fff;color:#000;font:inherit;font-size:22px;font-weight:700;letter-spacing:3px;cursor:pointer;}
+#play-btn:disabled{opacity:.5;}
+#server-btn{flex:1.2;cursor:pointer;text-align:left;}
+#server-label{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#ai-box{display:none;}
+/* FPS·WT 성능 표시 바로 오른쪽에 붙는 설정 버튼 */
+#settings-btn{position:fixed;right:6px;bottom:4px;left:auto;top:auto;z-index:60;pointer-events:auto;padding:2px 5px;border:1px solid rgba(255,255,255,.32);border-radius:4px;background:rgba(0,0,0,.72);color:rgba(255,255,255,.82);font:10px/1.2 monospace;font-weight:700;cursor:pointer;touch-action:manipulation;white-space:nowrap;}
+#settings-btn:active{background:rgba(255,255,255,.22);}
+/* 메인화면에서는 이미 메인화면이므로 해당 이동 버튼을 표시하지 않습니다. */
+body.menu #main-menu-btn{display:none;}
+#settings-panel{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.78);pointer-events:auto;touch-action:auto;}
+.settings-card{width:min(440px,100%);max-height:min(80dvh,640px);overflow:auto;padding:20px;border:1px solid rgba(255,255,255,.24);border-radius:16px;background:#151515;box-shadow:0 16px 60px rgba(0,0,0,.65);}
+.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.settings-actions{display:flex;align-items:center;gap:8px;}
+#main-menu-btn{padding:7px 10px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.settings-head h2{font-size:21px;}
+#settings-close{width:36px;height:36px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:transparent;color:#fff;font-size:24px;cursor:pointer;}
+.settings-page{padding-top:8px;}
+.settings-row{padding:14px 2px;border-bottom:1px solid rgba(255,255,255,.12);}
+.settings-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;}
+.settings-value{color:#ffe27a;font-variant-numeric:tabular-nums;}
+.settings-range{display:block;width:100%;margin-top:14px;accent-color:#fff;touch-action:pan-x;}
+.settings-stat{display:flex;justify-content:space-between;gap:12px;padding:14px 2px;border-bottom:1px solid rgba(255,255,255,.12);font-size:14px;}
+.settings-stat strong{color:#ffe27a;}
+
+/* ── 서버 페이지 (전체 화면) ── */
+#server-page{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.92);display:none;flex-direction:column;touch-action:pan-y;}
+.sp-head{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 14px;border-bottom:1px solid rgba(255,255,255,.15);font-size:20px;font-weight:700;}
+.sp-head button{background:none;border:none;color:#fff;font-size:26px;cursor:pointer;}
+.sp-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;max-width:640px;width:100%;margin:0 auto;}
+.sp-current{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);}
+.sp-create{display:flex;gap:10px;}
+.sp-create input{flex:1;min-width:0;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#fff;font:inherit;outline:none;}
+.sp-btn{padding:12px 16px;border-radius:10px;border:none;background:#fff;color:#000;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap;}
+.sp-btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);}
+.sp-btn:disabled{opacity:.5;}
+.sp-title{font-size:12px;color:#999;}
+.sp-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);}
+.sp-item .nm{font-weight:700;}
+.sp-item .sub{font-size:12px;color:#999;margin-top:2px;}
+.sp-empty{color:#777;font-size:13px;padding:10px 2px;}
+#toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.25);padding:8px 16px;border-radius:20px;font-size:13px;z-index:90;opacity:0;transition:opacity .25s;pointer-events:none;}
+</style>
+</head>
+<body class="menu">
+<div id="hud">
+  <div id="hp-wrap"><div id="hp-fg"></div></div>
+  <div id="hp-taken"></div>
+  <div id="leaderboard"><div id="leaderboard-list"></div><div id="server-counts">AI 0 · 플레이어 0</div><div id="top-kills" aria-live="polite"></div></div>
+  <div id="menu-stats" aria-live="polite"></div>
+  <div id="room-info"></div>
+  <div id="killfeed"></div>
+</div>
+<div id="perf-stats">FPS 0 · WT 0ms</div>
+<div id="crosshair"></div>
+<div id="charge-wrap"><div id="charge-fg"></div></div>
+<div id="remote-ui"></div>
+<div id="hit-flash"></div>
+<div id="low-hp-vignette"></div>
+<div id="kill-banner"></div>
+
+<div id="controls">
+  <div id="joy-area"><div id="joy-base"><div id="joy-knob"></div></div></div>
+  <button id="punch-btn" class="action-btn"><span class="btn-icon">👊</span></button>
+  <button id="jump-btn" class="action-btn"><span class="btn-icon">⬆</span></button>
+  <button id="throw-btn" class="action-btn"><span class="btn-icon">💣</span></button>
+</div>
+
+<div id="menu">
+  <div id="menu-title">군밤</div>
+  <div id="menu-bottom">
+    <div id="menu-msg"></div>
+    <div id="menu-members"></div>
+    <div id="menu-row">
+      <div class="m-box" id="name-box"><label>이름</label><input id="name-in" maxlength="6" autocomplete="off" value="player"></div>
+      <button id="play-btn">플레이</button>
+      <button class="m-box" id="server-btn"><span class="lbl">서버</span><span id="server-label">없음</span></button>
+      <div class="m-box" id="ai-box"><label>AI</label>
+        <select id="ai-sel"><option>0</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settings-panel">⚙ 설정</button>
+<div id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="settings-card">
+    <div class="settings-head"><h2 id="settings-title">설정</h2><div class="settings-actions"><button id="main-menu-btn" type="button">메인화면</button><button id="settings-close" type="button" aria-label="닫기">×</button></div></div>
+    <section class="settings-page" role="tabpanel">
+      <div class="settings-row">
+        <div class="settings-row-head"><label for="sensitivity">감도</label><output id="sensitivity-value" class="settings-value">.005</output></div>
+        <input id="sensitivity" class="settings-range" type="range" min=".001" max=".100" step=".001" value=".005">
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="server-page">
+  <div class="sp-head"><button id="sp-back">←</button><span>서버</span></div>
+  <div class="sp-body">
+    <div id="sp-current"></div>
+    <div class="sp-create"><input id="sp-name" maxlength="5" pattern="[0-9A-Za-z가-힣]{1,5}" placeholder="서버 이름 (한글·영문·숫자 5글자 이하)" autocomplete="off"><button class="sp-btn" id="sp-create">서버 만들기</button></div>
+    <div class="sp-title">서버 목록</div>
+    <div id="sp-list"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"}}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+
+const SUPABASE_URL = 'https://sqaxxayqngbngqefdvqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_n6-WDrUrB4kMuHO_vImMwQ_yQxiPMjV';
+
+// ── Constants ─────────────────────────────────────────────
+const PLAYER_HP = 100;
+const PLAYER_SPEED = 9;
+const PLAYER_RUN = 13;
+const PLAYER_R = .42;
+const JUMP_VEL = 9.5;
+const GRAVITY = -22;
+
+const EXPLOSION_DAMAGE = 30;      // 풀게이지일 때 폭발 데미지
+const DIRECT_HIT_DAMAGE = 120;    // 풀게이지일 때 직격 데미지
+const MIN_CHARGE_FACTOR = .2;    // 게이지 0일 때 데미지 배율
+const EXPLOSION_RADIUS = 1;
+const HP_REGEN_DELAY = 2;          // 마지막 피격 후 회복 시작까지
+const HP_REGEN_PER_SEC = 12;          // 초당 회복량
+const CHARGE_MAX = .5;
+const AI_MISS_CHANCE = .99;
+const AI_FIRE_AIM_TOLERANCE = .14; // 약 8도 이내로 조준하면 발사
+const AI_SNIPER_RANGE = 15;
+const AI_RAPID_MIN_CHARGE_RATIO = .22;
+const AI_RAPID_MAX_CHARGE_RATIO = .48;
+const SHOT_SPEED = 800;           // 아주 빠른 탄속 (프레임마다 경로 전체를 검사하므로 통과 불가)
+const LOCAL_FIRE_COOLDOWN = .2; // 플레이어 난사 방지: 초당 약 2
+
+const ARENA_HALF = 28;
+const WALL_H = 14;
+const OBST_H = 3.2;
+const LIMIT = ARENA_HALF - .5;
+
+const PUNCH_DAMAGE = 50;
+const PUNCH_RANGE = 2.6;
+const PUNCH_KNOCKBACK = 10.2;
+const MOUSE_SENS = .0048;
+const PITCH_LIMIT = Math.PI / 2.1;
+const NETWORK_SEND_MS = 70;
+const AI_MAX_SPEED = 7.5;
+const PLAYER_COLOR = 0xdddddd;
+const PLAYER_COLOR_STR = '#dddddd';
+
+// ── 고정 맵: [x, z, 가로, 세로] (4방향 대칭) ──────────────
+const OBSTACLES = [
+  [0,0,5,5],
+  [12,0,2,10],[-12,0,2,10],[0,12,10,2],[0,-12,10,2],
+  [21,21,4,4],[-21,21,4,4],[21,-21,4,4],[-21,-21,4,4],
+  [21,8,3,3],[21,-8,3,3],[-21,8,3,3],[-21,-8,3,3],
+  [8,21,3,3],[-8,21,3,3],[8,-21,3,3],[-8,-21,3,3],
+];
+const OBST_AABB = OBSTACLES.map(o=>({ mn:[o[0]-o[2]/2, 0, o[1]-o[3]/2], mx:[o[0]+o[2]/2, OBST_H, o[1]+o[3]/2] }));
+// 아레나 테두리 주변의 8개 스폰 지점: 오른쪽·왼쪽·위·아래와 네 모서리
+const SPAWNS = [[24,0],[-24,0],[0,24],[0,-24],[16,16],[-16,16],[16,-16],[-16,-16]];
+const SPAWN_SAFE_DISTANCE = 7.5;
+
+const $ = id => document.getElementById(id);
+const lsGet = k=>{ try{ return localStorage.getItem(k); }catch{ return null; } };
+const lsSet = (k,v)=>{ try{ localStorage.setItem(k, v); }catch{} };
+const ui = {
+  menu:$('menu'), menuMsg:$('menu-msg'), menuMembers:$('menu-members'),
+  nameIn:$('name-in'), playBtn:$('play-btn'), serverBtn:$('server-btn'), serverLabel:$('server-label'),
+  aiBox:$('ai-box'), aiSel:$('ai-sel'),
+  serverPage:$('server-page'), spBack:$('sp-back'), spCurrent:$('sp-current'), spName:$('sp-name'), spCreate:$('sp-create'), spList:$('sp-list'),
+  toast:$('toast'),
+  roomInfo:$('room-info'), remoteUi:$('remote-ui'), hitFlash:$('hit-flash'), lowHpVignette:$('low-hp-vignette'), killBanner:$('kill-banner'),
+  leaderboard:$('leaderboard-list'), serverCounts:$('server-counts'), menuStats:$('menu-stats'), topKills:$('top-kills'), perfStats:$('perf-stats'), hpFg:$('hp-fg'), hpTaken:$('hp-taken'), killfeed:$('killfeed'),
+  chargeWrap:$('charge-wrap'), chargeFg:$('charge-fg'),
+  controls:$('controls'), throwBtn:$('throw-btn'), jumpBtn:$('jump-btn'), punchBtn:$('punch-btn'),
+  joyBase:$('joy-base'), joyKnob:$('joy-knob'),
+  settingsBtn:$('settings-btn'), settingsPanel:$('settings-panel'), settingsClose:$('settings-close'), mainMenuBtn:$('main-menu-btn'),
+  sensitivity:$('sensitivity'), sensitivityValue:$('sensitivity-value'),
+};
+function loadSensitivity(){
+  try{
+    const saved = Number(localStorage.getItem('gb_sensitivity'));
+    if(Number.isFinite(saved) && saved > 0) return clamp(saved, .001, .1);
+    // 이전 버전의 마우스 감도 값을 통합 감도로 승계합니다.
+    const legacy = Number(localStorage.getItem('gb_mouse_sens'));
+    return Number.isFinite(legacy) && legacy > 0 ? clamp(legacy, .001, .1) : MOUSE_SENS;
+  }catch{ return MOUSE_SENS; }
+}
+function saveSensitivity(value){ try{ localStorage.setItem('gb_sensitivity', String(value)); }catch{} }
+let sensitivity = loadSensitivity();
+ui.sensitivity.value = String(sensitivity);
+ui.sensitivityValue.textContent = sensitivity.toFixed(3);
+ui.nameIn.value = (lsGet('gb_name') || 'player').slice(0,6);
+
+// ── Renderer / Scene ──────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+scene.fog = new THREE.Fog(0x111111, 60, 150);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, .05, 220);
+camera.position.set(0, 26, 34);
+const handGroup = new THREE.Group();
+camera.add(handGroup);
+scene.add(camera);
+
+scene.add(new THREE.HemisphereLight(0xdde6ff, 0x222222, .9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(18, 36, 12);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -45; sun.shadow.camera.right = 45;
+sun.shadow.camera.top = 45; sun.shadow.camera.bottom = -45;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 100;
+sun.shadow.bias = -.0005;
+sun.shadow.normalBias = .03;
+// 로컬 플레이어의 그림자 전용 레이어까지 그림자 맵에 포함합니다.
+sun.shadow.camera.layers.enable(1);
+scene.add(sun);
+
+// ── Physics ───────────────────────────────────────────────
+const world = new CANNON.World();
+world.gravity.set(0, GRAVITY, 0);
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.solver.iterations = 10;
+world.allowSleep = true;
+const matGround = new CANNON.Material('g');
+const matObj = new CANNON.Material('o');
+world.addContactMaterial(new CANNON.ContactMaterial(matGround, matObj, { friction:0, restitution:.05 }));
+world.addContactMaterial(new CANNON.ContactMaterial(matObj, matObj, { friction:0, restitution:.15 }));
+
+function safeRemoveBody(b){ try{ if(b && b.world) world.removeBody(b); }catch{} }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function makeId(){ return crypto.randomUUID ? crypto.randomUUID().slice(0,8) : Math.random().toString(36).slice(2,10); }
+function nowMs(){ return performance.now(); }
+// 매 프레임 호출되는 경로에서 쓰는 재사용 객체 (GC 부담 감소)
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3();
+const _mn = [0,0,0], _mx = [0,0,0];
+const HIT_COLOR_BOT = new THREE.Color(0xff3333), HIT_COLOR_REMOTE = new THREE.Color(0xff4040);
+const BOT_TURN_SPEED = 3; // rad/s (비전투 회전)
+const BOT_COMBAT_TURN_SPEED = 1.35; // 교전 중 추적 회전은 느리게: 정지 표적은 맞추기 쉽고 이동 표적은 피하기 쉬움
+function angDiff(a, b){
+  let d = (b - a) % (Math.PI*2);
+  if(d > Math.PI) d -= Math.PI*2;
+  if(d < -Math.PI) d += Math.PI*2;
+  return d;
+}
+
+function clampBody(b){
+  const p = b.position, v = b.velocity;
+  if(p.x > LIMIT){ p.x = LIMIT; if(v.x > 0) v.x = 0; }
+  if(p.x < -LIMIT){ p.x = -LIMIT; if(v.x < 0) v.x = 0; }
+  if(p.z > LIMIT){ p.z = LIMIT; if(v.z > 0) v.z = 0; }
+  if(p.z < -LIMIT){ p.z = -LIMIT; if(v.z < 0) v.z = 0; }
+}
+function insideObstacle(x, z, m){
+  return OBSTACLES.some(o=>Math.abs(x-o[0]) < o[2]/2+m && Math.abs(z-o[1]) < o[3]/2+m);
+}
+function freePoint(){
+  for(let i=0;i<40;i++){
+    const x = (Math.random()*2-1)*(ARENA_HALF-3), z = (Math.random()*2-1)*(ARENA_HALF-3);
+    if(!insideObstacle(x, z, 1.2)) return new THREE.Vector3(x, .6, z);
+  }
+  return new THREE.Vector3(SPAWNS[0][0], .6, SPAWNS[0][1]);
+}
+// 주변에 플레이어/AI가 있는 지점은 제외하고, 가장 한산한 테두리 스폰을 선택합니다.
+function pickSpawn(selfId){
+  const others = allTargets().filter(t=>t.pid !== selfId);
+  const scored = SPAWNS.map(sp=>{
+    let nearest = Infinity;
+    for(const t of others) nearest = Math.min(nearest, Math.hypot(t.x-sp[0], t.z-sp[1]));
+    return { sp, nearest };
+  });
+  const safe = scored.filter(x=>x.nearest >= SPAWN_SAFE_DISTANCE);
+  const pool = safe.length ? safe : scored;
+  pool.sort((a,b)=>b.nearest-a.nearest);
+  // 동점일 때만 약간 섞어 같은 지점 반복을 줄입니다.
+  const bestDistance = pool[0]?.nearest ?? Infinity;
+  const tied = pool.filter(x=>x.nearest >= bestDistance - 1.5);
+  const chosen = tied[Math.floor(Math.random()*tied.length)] || pool[0] || {sp:SPAWNS[0]};
+  return new THREE.Vector3(chosen.sp[0], .6, chosen.sp[1]);
+}
+
+// ── Arena: 정해진 맵 ──────────────────────────────────────
+(function buildArena(){
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const cx = cv.getContext('2d');
+  cx.fillStyle = '#2e2e2e'; cx.fillRect(0,0,256,256);
+  cx.strokeStyle = '#444444'; cx.lineWidth = 4; cx.strokeRect(0,0,256,256);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(ARENA_HALF*2/4, ARENA_HALF*2/4);
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  tex.encoding = THREE.sRGBEncoding;
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(ARENA_HALF*2, ARENA_HALF*2),
+    new THREE.MeshStandardMaterial({ map:tex, roughness:.95, metalness:0 })
+  );
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const fb = new CANNON.Body({ mass:0, material:matGround });
+  fb.addShape(new CANNON.Plane());
+  fb.quaternion.setFromEuler(-Math.PI/2, 0, 0);
+  world.addBody(fb);
+
+  // 보이지 않는 외벽 (물리 충돌만)
+  const T = 1, L = ARENA_HALF + T;
+  [[0, L, L, T],[0,-L, L, T],[ L,0, T, ARENA_HALF],[-L,0, T, ARENA_HALF]].forEach(w=>{
+    const b = new CANNON.Body({ mass:0, material:matGround });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(w[2], WALL_H/2, w[3])));
+    b.position.set(w[0], WALL_H/2, w[1]);
+    world.addBody(b);
+  });
+  const cb = new CANNON.Body({ mass:0, material:matGround });
+  cb.addShape(new CANNON.Box(new CANNON.Vec3(ARENA_HALF+2, .5, ARENA_HALF+2)));
+  cb.position.set(0, WALL_H+.5, 0);
+  world.addBody(cb);
+
+  // 장애물
+  const obMat = new THREE.MeshStandardMaterial({ color:0x6a6a6a, roughness:.9, metalness:.05 });
+  OBSTACLES.forEach(o=>{
+    const m = new THREE.Mesh(new THREE.BoxGeometry(o[2], OBST_H, o[3]), obMat);
+    m.position.set(o[0], OBST_H/2, o[1]);
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    const b = new CANNON.Body({ mass:0, material:matGround });
+    b.addShape(new CANNON.Box(new CANNON.Vec3(o[2]/2, OBST_H/2, o[3]/2)));
+    b.position.set(o[0], OBST_H/2, o[1]);
+    world.addBody(b);
+  });
+})();
+
+// ── Player ────────────────────────────────────────────────
+const playerBody = new CANNON.Body({ mass:70, material:matObj, linearDamping:0, angularDamping:1 });
+playerBody.addShape(new CANNON.Sphere(PLAYER_R));
+playerBody.position.set(0, .6, 0);
+playerBody.fixedRotation = true;
+playerBody.updateMassProperties();
+const localShadowGroup = new THREE.Group();
+// AI와 같은 몸체를 사용하되, 레이어 1에만 두어 본인 카메라에는 보이지 않게 합니다.
+// DirectionalLight의 shadow camera는 레이어 1을 렌더링하므로 그림자는 정상적으로 생깁니다.
+localShadowGroup.traverse(o=>o.layers.set(1));
+const localShadowMat = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:.8, metalness:0 });
+const localShadowTorso = new THREE.Mesh(new THREE.BoxGeometry(.92,1.18,.92), localShadowMat);
+localShadowTorso.position.y = .59;
+localShadowTorso.castShadow = true;
+localShadowTorso.receiveShadow = true;
+localShadowGroup.add(localShadowTorso);
+localShadowGroup.visible = false;
+scene.add(localShadowGroup);
+
+let playerHP = PLAYER_HP;
+let hpRegenCooldown = 0;
+let score = 0;
+const killCounts = new Map();             // 현재 생존 사이클의 킬 수 (리더보드)
+const totalKillCounts = new Map();         // 서버 세션 누적 킬 수
+const deathCounts = new Map();             // 서버 세션 누적 사망 수
+const damageCounts = new Map();             // 서버 세션 누적 딜량
+const statNames = new Map();               // 퇴장한 참가자의 이름도 통계에 유지
+let gameActive = false;          // 내가 플레이(전투) 중인지
+let isOnGround = false;
+let yaw = 0, pitch = 0;
+let isCharging = false, chargeTime = 0, throwHeld = false;
+let localFireCooldown = 0;
+let punchCooldown = 0;
+let seq = 0, sendAccumulator = 0, netReady = false;
+let droneAngle = 0;
+let lbDirty = false, lbLast = 0, lbKey = '', chargeShown = false, lastCleanup = 0, roomInfoText = '';
+function resetServerStats(){
+  killCounts.clear(); totalKillCounts.clear(); deathCounts.clear(); damageCounts.clear(); statNames.clear();
+  statNames.set(localPlayer.id, localPlayer.name || 'player');
+  lbKey = '';
+  renderLeaderboard();
+}
+
+const keys = {};
+const lastSeenSeq = new Map();
+const presenceCache = new Map();
+const remotePlayers = new Map();
+const blastFx = [];
+const lastHitBy = new Map();
+const recentKills = new Map();
+const aiBots = [];
+const shots = [];
+
+const localPlayer = { id: makeId(), name:'player', alive:false };
+statNames.set(localPlayer.id, ui.nameIn.value || 'player');
+let supabase = null, channel = null;
+let currentServer = null;        // { code, name, hostId, isHost, aiCount, public }
+const PUBLIC_SERVERS = [
+  // 서버 1은 서버장 UI 없이 AI 동기화용 내부 controller만 사용합니다.
+  { code:'public-1', name:'서버 1', hostId:null, hostName:'', count:0, aiCount:10, public:true, electHost:true },
+  { code:'public-2', name:'서버 2', hostId:null, hostName:'', count:0, aiCount:0, public:true, electHost:false },
+  // 서버 3만 최초 입장자를 세션 서버장으로 선출하고 관리 UI를 제공합니다.
+  { code:'public-3', name:'서버 3', hostId:null, hostName:'', count:0, aiCount:0, public:true, electHost:true },
+];
+const SERVER_NAME_RE = /^[0-9A-Za-z가-힣]{1,5}$/;
+const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const isHostNow = ()=> !!(currentServer && currentServer.isHost);
+const shouldElectPublicHost = ()=> !!(currentServer && currentServer.public && currentServer.electHost);
+const hasServerManagement = ()=> !!(currentServer && (!currentServer.public || currentServer.code === 'public-3'));
+
+// ── Hand model ────────────────────────────────────────────
+const bombModelState = { scene:null };
+new GLTFLoader().load('nuts.glb', gltf=>{
+  bombModelState.scene = gltf.scene;
+  prepMeshShadows(bombModelState.scene);
+  rebuildHandBomb();
+}, undefined, ()=>{});
+function prepMeshShadows(root){
+  root.traverse(o=>{
+    if(o.isMesh){
+      o.castShadow = true; o.receiveShadow = true;
+      if(o.material && o.material.clone) o.material = o.material.clone();
+    }
+  });
+  return root;
+}
+const BOMB_FALLBACK_COLOR = 0x8B4513;
+const FALLBACK_MAT = new THREE.MeshStandardMaterial({ color:BOMB_FALLBACK_COLOR, roughness:.9 });
+const FALLBACK_HAND_GEO = new THREE.SphereGeometry(.03,10,8);
+const FALLBACK_SHOT_GEO = new THREE.SphereGeometry(.11,12,10);
+const BLAST_GEO = new THREE.SphereGeometry(EXPLOSION_RADIUS, 24, 18);
+const HAND_BOMB_SCALE = .056;
+let handModel = null;
+let handSwing = 0;
+function attachHandBomb(parent){
+  if(bombModelState.scene){
+    const m = bombModelState.scene.clone(true);   // 원본은 로드 시 한 번만 prep
+    m.scale.setScalar(HAND_BOMB_SCALE);
+    parent.add(m);
+  } else {
+    parent.add(new THREE.Mesh(FALLBACK_HAND_GEO, FALLBACK_MAT));
+  }
+}
+function buildHandModel(){
+  const g = new THREE.Group();
+  const hand = new THREE.Mesh(new THREE.BoxGeometry(.07,.10,.14), new THREE.MeshStandardMaterial({ color:0xbbbbbb, roughness:.8 }));
+  hand.position.set(.015,-.02,0);
+  g.add(hand);
+  const bp = new THREE.Group();
+  attachHandBomb(bp);
+  bp.position.set(0,.09,0);
+  g.add(bp);
+  g.position.set(.22,-.22,-.35);
+  g.rotation.set(.1,.3,.05);
+  g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; } });
+  handGroup.add(g);
+  return g;
+}
+function rebuildHandBomb(){
+  if(!handModel) return;
+  while(handModel.children.length > 1) handModel.remove(handModel.children[1]);
+  const bp = new THREE.Group();
+  attachHandBomb(bp);
+  bp.position.set(0,.09,0);
+  handModel.add(bp);
+}
+handModel = buildHandModel();
+const handShadowProxy = handModel.clone(true);
+handShadowProxy.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; } });
+handShadowProxy.matrixAutoUpdate = false;
+handShadowProxy.visible = false;
+scene.add(handShadowProxy);
+handGroup.visible = false;
+
+// ── Names / Kill log ──────────────────────────────────────
+function nameOf(pid){
+  if(pid === localPlayer.id) return localPlayer.name;
+  const b = aiBots.find(x=>x.id===pid);
+  if(b) return b.name;
+  const rp = remotePlayers.get(pid);
+  return rp ? rp.name : 'player';
+}
+function addKillfeed(msg){
+  const d = document.createElement('div');
+  d.className = 'kf-item';
+  d.textContent = msg;
+  ui.killfeed.prepend(d);
+  setTimeout(()=>d.remove(), 3500);
+  while(ui.killfeed.children.length > 5) ui.killfeed.lastChild.remove();
+}
+function rememberStatName(pid){
+  if(!pid) return;
+  const name = nameOf(pid);
+  if(name && name !== 'player') statNames.set(pid, name);
+}
+function statNameOf(pid){ return statNames.get(pid) || nameOf(pid) || 'player'; }
+function registerKill(victimId, killerId){
+  const t = nowMs();
+  const last = recentKills.get(victimId);
+  if(last && t - last < 2000) return;
+  recentKills.set(victimId, t);
+  killerId = killerId || victimId;
+  rememberStatName(victimId); rememberStatName(killerId);
+  deathCounts.set(victimId, (deathCounts.get(victimId) || 0) + 1);
+  addKillfeed(statNameOf(killerId) + ' → ' + statNameOf(victimId));
+  if(killerId !== victimId){
+    killCounts.set(killerId, (killCounts.get(killerId) || 0) + 1);
+    totalKillCounts.set(killerId, (totalKillCounts.get(killerId) || 0) + 1);
+    if(killerId === localPlayer.id) showKillBanner(statNameOf(victimId));
+    const bot = aiBots.find(b=>b.id === killerId);
+    if(bot) bot.score = killCounts.get(killerId);
+  }
+  updateHUD();
+}
+
+// ── Damage pipeline ───────────────────────────────────────
+function getEntityPosition(pid){
+  if(pid === localPlayer.id) return new THREE.Vector3(playerBody.position.x, playerBody.position.y, playerBody.position.z);
+  const bot = aiBots.find(b=>b.id===pid);
+  if(bot) return bot.getPos();
+  const rp = remotePlayers.get(pid);
+  return rp ? rp.target.clone() : null;
+}
+function getTargetAdapter(pid){
+  if(pid === localPlayer.id){
+    return { isAlive:()=>localPlayer.alive, applyDamage:(dmg,from,src)=>{ damageLocalPlayer(dmg, from, src, false); return !localPlayer.alive; } };
+  }
+  const bot = aiBots.find(b=>b.id===pid);
+  if(bot){
+    return { isAlive:()=>bot.alive, applyDamage:(dmg,from)=>{ bot.takeDamage(dmg, from); return !bot.alive; } };
+  }
+  const rp = remotePlayers.get(pid);
+  if(rp){
+    return {
+      isAlive:()=>rp.alive,
+      applyDamage:(dmg,from)=>{
+        lastHitBy.set(pid, from);
+        rp.hp = Math.max(0, rp.hp - dmg);
+        rp.pulse = .18;
+        if(rp.hp <= 0 && rp.alive){
+          rp.alive = false;
+          registerKill(pid, from);
+        }
+        return rp.hp <= 0;
+      }
+    };
+  }
+  return null;
+}
+function applyDamageToPid(pid, dmg, srcPos, fromId){
+  const t = getTargetAdapter(pid);
+  if(!t || !t.isAlive()) return false;
+  const vp = (pid !== localPlayer.id && fromId === localPlayer.id) ? getEntityPosition(pid) : null;
+  if(fromId && dmg > 0) damageCounts.set(fromId, (damageCounts.get(fromId) || 0) + dmg);
+  rememberStatName(fromId);
+  const killed = t.applyDamage(dmg, fromId, srcPos);
+  if(vp) showDamageNum(dmg, vp);
+  return killed;
+}
+function damageLocalPlayer(dmg, fromId, srcPos, alreadyRecorded=false){
+  if(!localPlayer.alive) return;
+  if(!alreadyRecorded && fromId && dmg > 0) damageCounts.set(fromId, (damageCounts.get(fromId) || 0) + dmg);
+  playerHP = Math.max(0, playerHP - dmg);
+  hpRegenCooldown = HP_REGEN_DELAY;
+  flashHit();
+  showTakenDamage(dmg);
+  if(srcPos) showHitDirection(srcPos);
+  if(playerHP <= 0) triggerDeath(fromId);
+  updateHUD();
+}
+function updateHealthRegen(dt){
+  if(!gameActive || !localPlayer.alive || playerHP >= PLAYER_HP) return;
+  hpRegenCooldown = Math.max(0, hpRegenCooldown - dt);
+  if(hpRegenCooldown <= 0){
+    const before = playerHP;
+    playerHP = Math.min(PLAYER_HP, playerHP + HP_REGEN_PER_SEC*dt);
+    if(Math.floor(before) !== Math.floor(playerHP)) updateHUD();
+  }
+}
+
+// 죽으면 메인 화면으로
+function triggerDeath(fromId){
+  if(!localPlayer.alive) return;
+  localPlayer.alive = false;
+  playerHP = 0;
+  registerKill(localPlayer.id, fromId || localPlayer.id);
+  killCounts.set(localPlayer.id, 0);
+  score = 0;
+  sendState();
+  const killer = fromId && fromId !== localPlayer.id ? nameOf(fromId) : null;
+  setPlaying(false);
+  ui.menuMsg.classList.add('death-message');
+  ui.menuMsg.textContent = killer ? killer + '에게 사망' : '사망';
+  updateHUD();
+}
+
+function respawnLocalPlayer(){
+  localPlayer.alive = true;
+  playerHP = PLAYER_HP;
+  const s = pickSpawn(localPlayer.id);
+  if(!playerBody.world) world.addBody(playerBody);
+  playerBody.position.set(s.x, s.y, s.z);
+  playerBody.velocity.set(0,0,0);
+  yaw = Math.atan2(s.x, s.z);   // 맵 중앙을 바라봄
+  pitch = 0;
+  updateHUD();
+  sendState();
+}
+
+// ── HUD ───────────────────────────────────────────────────
+const leaderboardNameCollator = new Intl.Collator('ko-KR', { numeric:true, sensitivity:'base' });
+function leaderboardNameGroup(name){
+  for(const ch of String(name || 'player').normalize('NFC')){
+    if(/[A-Za-z]/.test(ch)) return 0;             // 알파벳
+    if(/\p{Script=Hangul}/u.test(ch)) return 1;   // 한글
+    if(/\p{N}/u.test(ch)) return 2;               // 숫자
+    if(/[\p{P}\p{S}\s]/u.test(ch)) continue;   // 구분 기호는 정렬 기준에서 제외
+    if(/\p{L}/u.test(ch)) return 0;               // 그 밖의 문자도 알파벳 그룹
+    return 3;
+  }
+  return 3;
+}
+function compareLeaderboardNames(a,b){
+  const groupDiff = leaderboardNameGroup(a.name) - leaderboardNameGroup(b.name);
+  if(groupDiff) return groupDiff;
+  return leaderboardNameCollator.compare(a.name || 'player', b.name || 'player') || String(a.pid).localeCompare(String(b.pid));
+}
+function drawLeaderboard(){
+  drawMenuStats();
+  const byPid = new Map();
+  byPid.set(localPlayer.id, { pid:localPlayer.id, name:localPlayer.name || 'player', kills:killCounts.get(localPlayer.id) ?? 0 });
+  const botNames = new Set();
+  remotePlayers.forEach((rp,pid)=>{
+    byPid.set(pid, { pid, name:rp.name || 'player', kills:killCounts.get(pid) ?? rp.score ?? 0 });
+    if(rp.isBot && rp.name) botNames.add(rp.name);
+  });
+  aiBots.forEach(b=>{
+    byPid.set(b.id, { pid:b.id, name:b.name, kills:killCounts.get(b.id) ?? b.score ?? 0 });
+    botNames.add(b.name);
+  });
+  const remoteAiCount = Array.from(remotePlayers.values()).filter(rp=>rp.isBot).length;
+  const configuredAiCount = clamp(Math.floor(Number(currentServer?.aiCount) || 0), 0, 15);
+  const aiCount = Math.max(aiBots.length, remoteAiCount, configuredAiCount);
+  // 네트워크에서 AI 첫 상태를 받기 전에도 설정된 AI를 0킬로 바로 표시한다.
+  for(let i=0;i<aiCount;i++){
+    const name = 'BOT_'+(i+1);
+    if(!botNames.has(name)) byPid.set('ai-pending-'+(i+1), { pid:'ai-pending-'+(i+1), name, kills:0 });
+  }
+  const rows = Array.from(byPid.values());
+  rows.sort((a,b)=>(b.kills-a.kills) || compareLeaderboardNames(a,b));
+  const top = rows.slice(0,5);
+  const totalByPid = new Map(rows.map(r=>[r.pid, { ...r, kills:totalKillCounts.get(r.pid) || 0 }]));
+  totalKillCounts.forEach((kills, pid)=>{
+    if(!totalByPid.has(pid)) totalByPid.set(pid, { pid, name:statNameOf(pid), kills });
+  });
+  const totalRows = Array.from(totalByPid.values());
+  totalRows.sort((a,b)=>(b.kills-a.kills) || compareLeaderboardNames(a,b));
+  const topTotal = totalRows.slice(0,3);
+  const countText = 'AI ' + aiCount + ' · 플레이어 ' + Math.max(1, presenceCache.size);
+  const key = countText + '\n' + top.map(r=>r.pid + '\t' + r.name + '\t' + r.kills).join('\n') + '\nT:' + topTotal.map(r=>r.pid + '\t' + r.name + '\t' + r.kills).join('\n');
+  if(key === lbKey) return;   // 바뀐 게 없으면 DOM을 건드리지 않음
+  lbKey = key;
+  ui.leaderboard.textContent = '';
+  top.forEach((row, index)=>{
+    const el = document.createElement('div'); el.className = 'lb-row' + (row.pid === localPlayer.id ? ' me' : '');
+    const rank = document.createElement('span'); rank.className = 'lb-rank'; rank.textContent = String(index + 1);
+    const name = document.createElement('span'); name.className = 'lb-name'; name.textContent = row.name;
+    const value = document.createElement('span'); value.className = 'lb-kills'; value.textContent = String(row.kills);
+    el.append(rank, name, value); ui.leaderboard.appendChild(el);
+  });
+  ui.serverCounts.textContent = countText;
+  if(ui.topKills){
+    const top3 = topTotal;
+    ui.topKills.innerHTML = '<div class="top-title">최다 킬 TOP 3</div>';
+    top3.forEach((row, index)=>{
+      const el = document.createElement('div'); el.className = 'top-row' + (row.pid === localPlayer.id ? ' me' : '');
+      const label = document.createElement('span'); label.textContent = (index + 1) + '. ' + row.name;
+      const value = document.createElement('span'); value.className = 'top-value'; value.textContent = String(row.kills);
+      el.append(label, value); ui.topKills.appendChild(el);
+    });
+  }
+}
+function drawMenuStats(){
+  if(!ui.menuStats) return;
+  const localKills = totalKillCounts.get(localPlayer.id) || 0;
+  const localDeaths = deathCounts.get(localPlayer.id) || 0;
+  const deathEntries = Array.from(deathCounts.entries()).filter(([pid, n])=>n > 0);
+  const killEntries = Array.from(totalKillCounts.entries()).filter(([pid, n])=>n > 0);
+  const damageEntries = Array.from(damageCounts.entries()).filter(([pid, n])=>n > 0);
+  const mostDeaths = deathEntries.sort((a,b)=>b[1]-a[1])[0];
+  const mostKills = killEntries.sort((a,b)=>b[1]-a[1])[0];
+  const mostDamage = damageEntries.sort((a,b)=>b[1]-a[1])[0];
+  const statPerson = entry => entry ? '<span class="stat-name">' + statNameOf(entry[0]) + '</span><strong>' + entry[1] + '</strong>' : '<span class="stat-name">없음</span><strong>0</strong>';
+  ui.menuStats.innerHTML =
+    '<div class="stat-line"><span>내 총 킬수</span><strong>' + localKills + '</strong></div>' +
+    '<div class="stat-line"><span>내 죽음수</span><strong>' + localDeaths + '</strong></div>' +
+    '<div class="stat-line"><span>내 딜량</span><strong>' + (damageCounts.get(localPlayer.id) || 0) + '</strong></div>' +
+    '<div class="stat-line stat-divider"><span>최다 사망</span>' + statPerson(mostDeaths) + '</div>' +
+    '<div class="stat-line"><span>최다 킬</span>' + statPerson(mostKills) + '</div>' +
+    '<div class="stat-line"><span>최대 딜량</span>' + statPerson(mostDamage) + '</div>';
+}
+// 네트워크 메시지마다 다시 그리지 않고, 변경 표시만 해 두었다가 루프에서 한 번에 처리
+function renderLeaderboard(){ lbDirty = true; }
+function flushLeaderboard(t){
+  if(!lbDirty || t - lbLast < 120) return;
+  lbDirty = false; lbLast = t;
+  drawLeaderboard();
+}
+function showKillBanner(victimName){
+  ui.killBanner.textContent = (victimName || '상대') + ' 킬!';
+  ui.killBanner.classList.remove('show');
+  void ui.killBanner.offsetWidth;
+  ui.killBanner.classList.add('show');
+  clearTimeout(showKillBanner.timer);
+  showKillBanner.timer = setTimeout(()=>ui.killBanner.classList.remove('show'), 1500);
+}
+function updateHUD(){
+  ui.hpFg.style.width = clamp(playerHP/PLAYER_HP*100, 0, 100) + '%';
+  const missing = clamp(1 - playerHP/PLAYER_HP, 0, 1);
+  ui.lowHpVignette.style.opacity = missing > 0 ? String(Math.min(.9, missing*1.15)) : '0';
+  renderLeaderboard();
+}
+function flashHit(){
+  ui.hitFlash.classList.add('flash');
+  setTimeout(()=>ui.hitFlash.classList.remove('flash'), 110);
+}
+function showTakenDamage(dmg){
+  const d = document.createElement('div');
+  d.className = 'taken-num';
+  d.textContent = '-' + dmg;
+  ui.hpTaken.appendChild(d);
+  setTimeout(()=>d.remove(), 900);
+}
+const hitIndicators = [];
+function showHitDirection(src){
+  const el = document.createElement('div');
+  el.className = 'hit-dir';
+  document.body.appendChild(el);
+  hitIndicators.push({ el, pos:new THREE.Vector3(src.x, src.y, src.z), life:1.2 });
+}
+function clearHitIndicators(){
+  hitIndicators.forEach(h=>h.el.remove());
+  hitIndicators.length = 0;
+}
+function updateHitIndicators(dt){
+  for(let i = hitIndicators.length-1; i >= 0; i--){
+    const h = hitIndicators[i];
+    h.life -= dt;
+    if(h.life <= 0){ h.el.remove(); hitIndicators.splice(i,1); continue; }
+    const dx = h.pos.x - playerBody.position.x, dz = h.pos.z - playerBody.position.z;
+    if(Math.hypot(dx, dz) < .6){ h.el.style.opacity = 0; continue; }
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+    const ang = Math.atan2(dx*rx + dz*rz, dx*fx + dz*fz);
+    h.el.style.opacity = Math.min(1, h.life/.6);
+    h.el.style.transform = 'rotate(' + ang + 'rad)';
+  }
+}
+function showDamageNum(dmg, pos3){
+  const v = pos3.clone().add(new THREE.Vector3(0,.8,0)).project(camera);
+  if(v.z > 1) return;
+  const x = (v.x*.5+.5)*innerWidth + 10;
+  const y = (-v.y*.5+.5)*innerHeight - 6;
+  if(x<-50||x>innerWidth+50||y<-50||y>innerHeight+50) return;
+  const d = document.createElement('div');
+  d.className = 'dmg-num';
+  d.textContent = '-' + dmg;
+  d.style.left = x+'px'; d.style.top = y+'px';
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(), 800);
+}
+
+// ── Nameplates / avatars ──────────────────────────────────
+function buildNameplateDom(name){
+  const w = document.createElement('div'); w.className = 'remote-ui';
+  const n = document.createElement('div'); n.className = 'remote-name'; n.textContent = name;
+  const h = document.createElement('div'); h.className = 'remote-hp';
+  const f = document.createElement('div');
+  const c = document.createElement('div'); c.className = 'remote-charge';
+  const cf = document.createElement('div'); c.appendChild(cf);
+  h.appendChild(f); w.appendChild(n); w.appendChild(h); w.appendChild(c);
+  ui.remoteUi.appendChild(w);
+  return { uiWrap:w, uiName:n, uiHpFg:f, uiCh:c, uiChFg:cf, hpPct:-1 };
+}
+function projectNameplate(np, x, y, z, ratio){
+  const st = np.uiWrap.style;
+  _v1.set(x, y, z).sub(camera.position);            // 카메라 → 머리
+  const viewDist = _v1.length();
+  if(viewDist > .05){
+    _v2.copy(_v1).multiplyScalar(1/viewDist);       // 시선 방향
+    for(let i=0;i<OBST_AABB.length;i++){
+      const box = OBST_AABB[i];
+      const hit = rayAABB(camera.position, _v2, box.mn, box.mx, viewDist);
+      if(hit >= 0 && hit < viewDist - .18){ st.display = 'none'; return; }
+    }
+  }
+  _v3.set(0,0,-1).applyQuaternion(camera.quaternion);
+  if(_v1.dot(_v3) <= .08){ st.display = 'none'; return; }
+  _v4.set(x, y, z).project(camera);
+  if(!(_v4.z>-1 && _v4.z<1 && Math.abs(_v4.x)<1.1 && Math.abs(_v4.y)<1.1)){ st.display = 'none'; return; }
+  st.display = 'block';
+  // left/top 대신 transform → 레이아웃 재계산 없이 이동
+  st.transform = 'translate(' + Math.round((_v4.x*.5+.5)*innerWidth) + 'px,' + Math.round((-_v4.y*.5+.5)*innerHeight) + 'px) translate(-50%,-100%)';
+  const pct = Math.round(clamp(ratio*100, 0, 100));
+  if(pct !== np.hpPct){ np.hpPct = pct; np.uiHpFg.style.width = pct + '%'; }
+}
+function makeBoxAvatar(){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:PLAYER_COLOR, roughness:.8 });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(.92,1.18,.92), mat);
+  box.position.y = .59;
+  box.castShadow = true;
+  g.add(box);
+  const eyeMat = new THREE.MeshStandardMaterial({ color:0x050505, roughness:.35, metalness:.05 });
+  [-.16,.16].forEach(x=>{
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.095,12,8), eyeMat);
+    eye.scale.set(1,.82,.34);
+    eye.position.set(x,.80,-.485);
+    eye.castShadow = true;
+    g.add(eye);
+  });
+  g.visible = false;
+  scene.add(g);
+  return { group:g, mat };
+}
+
+// ── AI Bot (서버장의 클라이언트에서만 동작) ──────────────
+class AIBot {
+  constructor(idx){
+    this.id = 'ai_'+idx+'_'+makeId();
+    this.name = 'BOT_'+(idx+1);
+    this.hp = PLAYER_HP; this.maxHp = PLAYER_HP; this.score = 0; this.hpRegenCooldown = 0;
+    this.alive = true; this.pulse = 0;
+    const av = makeBoxAvatar();
+    this.group = av.group; this.mat = av.mat;
+
+    this.body = new CANNON.Body({ mass:70, material:matObj, linearDamping:0, angularDamping:1 });
+    this.body.addShape(new CANNON.Sphere(PLAYER_R));
+    const sp = pickSpawn(this.id);
+    this.body.position.set(sp.x, sp.y, sp.z);
+    this.body.fixedRotation = true;
+    this.body.updateMassProperties();
+    world.addBody(this.body);
+
+    this.np = buildNameplateDom(this.name);
+    this.state = 'roam'; this.stateTimer = 0;
+    this.lastAttacker = null; this.attackerTimer = 0;
+    this.hideTarget = null; this.hideRefresh = 0;
+    this.roamTarget = freePoint();
+    this.yaw = Math.random()*Math.PI*2;
+    this.pitch = 0; this.aimErr = 1; this.mvx = 0; this.mvz = 0;
+    this.bombCooldown = 2.5 + Math.random()*3;
+    this.punchCooldown = 0; this.jumpTimer = 0;
+    this.strafeDir = Math.random()<.5 ? 1 : -1; this.strafeTimer = 0;
+    this.respawnTimer = 0; this.isOnGround = false;
+    this.charging = false; this.chargeT = 0; this.chargeGoal = 1;
+    this.stuckT = 0;
+  }
+  getPos(){ return new THREE.Vector3(this.body.position.x, this.body.position.y, this.body.position.z); }
+  eye(){ return this.getPos().add(new THREE.Vector3(0,.68,0)); }
+  // 실제 시점 방향 (플레이어 카메라와 같은 공식)
+  viewDir(){
+    const cp = Math.cos(this.pitch);
+    return new THREE.Vector3(-Math.sin(this.yaw)*cp, Math.sin(this.pitch), -Math.cos(this.yaw)*cp);
+  }
+
+  getCandidates(){
+    const out = [];
+    const bp = this.body.position;
+    const add = (pid, pos, hp, maxHp, name)=>{
+      if(!pos) return;
+      const dx = pos.x-bp.x, dy = pos.y-bp.y, dz = pos.z-bp.z;
+      const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if(dist > 34) return;
+      const target = { pid, pos:pos.clone(), hp:hp ?? PLAYER_HP, maxHp:maxHp ?? PLAYER_HP, name:name || 'target', dist, visible:false };
+      target.visible = this.canSee(target);
+      out.push(target);
+    };
+    if(localPlayer.alive) add(localPlayer.id, getEntityPosition(localPlayer.id), playerHP, PLAYER_HP, localPlayer.name);
+    remotePlayers.forEach((rp,pid)=>{ if(rp.alive && !rp.isBot) add(pid, rp.target, rp.hp, rp.maxHp, rp.name); });
+    aiBots.forEach(b=>{ if(b!==this && b.alive) add(b.id, b.getPos(), b.hp, b.maxHp, b.name); });
+    return out;
+  }
+  isFacing(pos, minDot=.38){
+    const bp = this.body.position;
+    const tx = pos.x - bp.x, tz = pos.z - bp.z;
+    const l2 = tx*tx + tz*tz;
+    if(l2 < .0001) return true;
+    return (-Math.sin(this.yaw)*tx - Math.cos(this.yaw)*tz)/Math.sqrt(l2) >= minDot;
+  }
+  hasObstacleLOS(target){
+    const bp = this.body.position;
+    _v1.set(bp.x, bp.y + .68, bp.z);
+    _v2.copy(target.pos).sub(_v1).normalize();
+    return hitscan(_v1, _v2, this.id).pid === target.pid;
+  }
+  canSee(target){
+    return this.isFacing(target.pos, -.18) && this.hasObstacleLOS(target);
+  }
+  hasLOS(target){
+    return this.isFacing(target.pos, .72) && this.hasObstacleLOS(target);
+  }
+  isEasyTarget(target){
+    return !!target && target.visible && target.dist < 13 && target.hp/Math.max(1,target.maxHp) < .48;
+  }
+  findTarget(){
+    const candidates = this.getCandidates();
+    const visible = candidates.filter(t=>t.visible);
+    const attacker = visible.find(t=>t.pid === this.lastAttacker);
+    if(attacker) return { ...attacker, priority:10000 };
+    if(visible.length){
+      let best = null, bestScore = -Infinity;
+      for(const t of visible){
+        const sc = (1-t.hp/Math.max(1,t.maxHp))*55 + Math.max(0,18-t.dist)*2.5 - t.dist*.35;
+        if(sc > bestScore){ bestScore = sc; best = t; }
+      }
+      return best;
+    }
+    if(this.lastAttacker && this.attackerTimer > 0){
+      const remembered = candidates.find(t=>t.pid === this.lastAttacker);
+      if(remembered) return remembered;
+    }
+    return null;
+  }
+  findHidePoint(){
+    const threats = this.getCandidates().filter(t=>t.visible || t.pid === this.lastAttacker);
+    let best = null, bestScore = -Infinity;
+    for(let i=0;i<30;i++){
+      const point = freePoint();
+      let score = 0;
+      threats.forEach(t=>{
+        const d = point.distanceTo(t.pos);
+        const threatEye = t.pos.clone().add(new THREE.Vector3(0,.9,0));
+        const dir = point.clone().sub(threatEye).normalize();
+        const blocked = hitscan(threatEye, dir, this.id).pid === null;
+        score += d + (blocked ? 22 : 0);
+      });
+      if(score > bestScore){ bestScore = score; best = point; }
+    }
+    return best || freePoint();
+  }
+  jump(){
+    if(!this.isOnGround) return;
+    this.body.velocity.y = JUMP_VEL;
+    this.isOnGround = false;
+  }
+  // 이동은 시점과 무관하게 속도만 설정 (yaw를 건드리지 않음)
+  moveToward(t, speed){
+    const p = this.getPos();
+    const dx = t.x-p.x, dz = t.z-p.z;
+    const d = Math.hypot(dx, dz);
+    if(d < .4) return;
+    const s = Math.min(speed, AI_MAX_SPEED);
+    this.body.wakeUp();
+    this.body.velocity.x = dx/d*s;
+    this.body.velocity.z = dz/d*s;
+  }
+  // 적을 바라본 채 좌우로 움직임
+  strafe(dt, target){
+    this.strafeTimer -= dt;
+    if(this.strafeTimer <= 0){
+      this.strafeDir = Math.random()<.5 ? 1 : -1;
+      this.strafeTimer = .4 + Math.random()*.6;
+    }
+    let fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), dist = 99;
+    if(target){
+      const p = this.getPos();
+      const dx = target.pos.x-p.x, dz = target.pos.z-p.z;
+      dist = Math.hypot(dx, dz);
+      if(dist > .01){ fx = dx/dist; fz = dz/dist; }
+    }
+    const rx = -fz, rz = fx;
+    const radial = dist < 5 ? -.5 : (dist > 10 ? .4 : 0);
+    const s = AI_MAX_SPEED*.8;
+    this.body.wakeUp();
+    this.body.velocity.x = (rx*this.strafeDir + fx*radial)*s;
+    this.body.velocity.z = (rz*this.strafeDir + fz*radial)*s;
+  }
+  // 시점 갱신: 프레임당 딱 한 번, 회전 속도 제한 → 떨림 없음
+  updateView(dt, target){
+    const eye = this.eye();
+    let wantYaw = this.yaw, wantPitch = 0, focus = false, toT = null;
+    if(target){
+      const aimPt = target.pos.clone(); aimPt.y += .35;
+      toT = aimPt.sub(eye);
+      const hd = Math.hypot(toT.x, toT.z);
+      if(hd > .05) wantYaw = Math.atan2(-toT.x, -toT.z);
+      wantPitch = clamp(Math.atan2(toT.y, Math.max(hd, .01)), -PITCH_LIMIT, PITCH_LIMIT);
+      focus = true;
+    } else {
+      // 적이 없으면 이동 방향(부드럽게 필터링)을 바라봄
+      const k = Math.min(1, dt*4);
+      this.mvx += (this.body.velocity.x - this.mvx)*k;
+      this.mvz += (this.body.velocity.z - this.mvz)*k;
+      if(Math.hypot(this.mvx, this.mvz) > 1.5) wantYaw = Math.atan2(-this.mvx, -this.mvz);
+    }
+    const maxTurn = (focus ? BOT_COMBAT_TURN_SPEED : BOT_TURN_SPEED*.5)*dt;
+    this.yaw += clamp(angDiff(this.yaw, wantYaw), -maxTurn, maxTurn);
+    this.pitch += clamp(wantPitch - this.pitch, -maxTurn, maxTurn);
+    if(focus && toT.lengthSq() > 1e-6){
+      this.aimErr = Math.acos(clamp(this.viewDir().dot(toT.normalize()), -1, 1));
+    } else this.aimErr = 1;
+  }
+  // 근접 교전은 빠른 부분 충전, 원거리에서 조준이 안정되면 100% 저격 충전
+  updateCharge(dt, target){
+    if(this.charging){
+      this.chargeT = Math.min(this.chargeT + dt, CHARGE_MAX);
+      if(this.chargeT >= this.chargeGoal && this.aimErr < AI_FIRE_AIM_TOLERANCE && this.bombCooldown <= 0){
+        this.throwBomb(clamp(this.chargeT/CHARGE_MAX, 0, 1), this.chargeMode);
+        this.charging = false; this.chargeT = 0;
+      }
+    } else if(target && target.visible && target.dist > 3 && target.dist < 24 && this.aimErr < .2 && this.hasLOS(target)){
+      this.charging = true; this.chargeT = 0;
+      const canSnipe = target.dist >= AI_SNIPER_RANGE && this.state !== 'retreat' && this.aimErr < .08;
+      this.chargeMode = canSnipe ? 'sniper' : 'rapid';
+      this.chargeGoal = canSnipe
+        ? CHARGE_MAX
+        : CHARGE_MAX*(AI_RAPID_MIN_CHARGE_RATIO + Math.random()*(AI_RAPID_MAX_CHARGE_RATIO-AI_RAPID_MIN_CHARGE_RATIO));
+    }
+  }
+  // 실제로 바라보는 방향으로 발사
+  throwBomb(ratio, mode='rapid'){
+    const o = this.eye();
+    const dir = this.viewDir();
+    if(Math.random() < AI_MISS_CHANCE){
+      const sign = Math.random() < .5 ? -1 : 1;
+      dir.applyAxisAngle(new THREE.Vector3(0,1,0), sign*(.10 + Math.random()*.12));
+    } else {
+      dir.x += (Math.random()-.5)*.02;
+      dir.y += (Math.random()-.5)*.02;
+      dir.z += (Math.random()-.5)*.02;
+    }
+    dir.normalize();
+    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const muzzle = o.clone().addScaledVector(right, .2).addScaledVector(dir, .4).add(new THREE.Vector3(0,-.2,0));
+    fireBomb(this.id, o, dir, ratio, muzzle);
+    this.bombCooldown = mode === 'sniper' ? 1.8 + Math.random()*1.2 : .25 + Math.random()*.45;
+  }
+  doPunch(tp, tid){
+    if(this.punchCooldown > 0) return;
+    const o = this.getPos();
+    this.punchCooldown = .3;
+    if(o.distanceTo(tp) <= PUNCH_RANGE + .5 && this.isFacing(tp, .2)) applyDamageToPid(tid, PUNCH_DAMAGE, o, this.id);
+  }
+  takeDamage(dmg, fromId){
+    if(!this.alive) return;
+    this.hp = Math.max(0, this.hp - dmg);
+    this.hpRegenCooldown = HP_REGEN_DELAY;
+    if(fromId && fromId !== this.id){ this.lastAttacker = fromId; this.attackerTimer = 6; }
+    this.pulse = .2;
+    if(this.hp <= 0){
+      this.alive = false;
+      this.np.uiWrap.style.display = 'none';
+      this.group.visible = false;
+      this.body.velocity.set(0,0,0);
+      this.body.position.y = -10;
+      this.respawnTimer = 6.0;
+      this.charging = false; this.chargeT = 0;
+      killCounts.set(this.id, 0);
+      this.score = 0;
+      registerKill(this.id, fromId);
+    }
+  }
+  respawn(){
+    this.alive = true; this.hp = PLAYER_HP; this.hpRegenCooldown = 0; this.pulse = 0;
+    const sp = pickSpawn(this.id);
+    this.body.position.set(sp.x, .6, sp.z);
+    this.body.velocity.set(0,0,0);
+    this.yaw = Math.atan2(sp.x, sp.z); this.pitch = 0; this.aimErr = 1; this.mvx = 0; this.mvz = 0;
+    this.state = 'roam'; this.stateTimer = 1;
+    this.lastAttacker = null; this.attackerTimer = 0; this.hideTarget = null;
+    this.bombCooldown = 3 + Math.random()*2;
+  }
+  update(dt){
+    if(!this.alive){
+      this.respawnTimer -= dt;
+      if(this.respawnTimer <= 0) this.respawn();
+      return;
+    }
+    this.isOnGround = this.body.position.y < .55 && Math.abs(this.body.velocity.y) < 1;
+    this.bombCooldown = Math.max(0, this.bombCooldown - dt);
+    this.punchCooldown = Math.max(0, this.punchCooldown - dt);
+    this.hpRegenCooldown = Math.max(0, this.hpRegenCooldown - dt);
+    if(this.hpRegenCooldown <= 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + HP_REGEN_PER_SEC*dt);
+    this.attackerTimer = Math.max(0, this.attackerTimer - dt);
+    this.hideRefresh = Math.max(0, this.hideRefresh - dt);
+    this.jumpTimer = Math.max(0, this.jumpTimer - dt);
+    this.stateTimer -= dt;
+
+    const target = this.findTarget();
+    const td = target ? target.dist : Infinity;
+    const hpRatio = this.hp/this.maxHp;
+    const retreating = hpRatio < .34 && !(target && this.isEasyTarget(target) && target.dist < 10);
+    if(retreating){
+      if(!this.hideTarget || this.hideRefresh <= 0){ this.hideTarget = this.findHidePoint(); this.hideRefresh = 2.2; }
+      this.state = 'retreat'; this.stateTimer = .6;
+    } else if(this.state === 'retreat' && target && this.isEasyTarget(target)){
+      this.state = 'chase'; this.stateTimer = .2;
+    }
+
+    const spd = Math.hypot(this.body.velocity.x, this.body.velocity.z);
+    if((this.state==='roam' || this.state==='chase') && spd < 1.2){
+      this.stuckT += dt;
+      if(this.stuckT > .5){
+        this.stuckT = 0;
+        this.state = 'roam'; this.roamTarget = freePoint(); this.stateTimer = 2 + Math.random()*2;
+      }
+    } else this.stuckT = 0;
+
+    if(this.stateTimer <= 0){
+      if(!target || td > 26){
+        this.state = 'roam'; this.roamTarget = freePoint(); this.stateTimer = 2 + Math.random()*2;
+      } else if(td < 3.5){
+        this.state = Math.random()<.55 ? 'punch' : 'strafe'; this.stateTimer = .4 + Math.random()*.5;
+      } else if(td < 14){
+        const r = Math.random();
+        this.state = r<.5 ? 'strafe' : 'chase';
+        this.stateTimer = .8 + Math.random()*1.2;
+      } else {
+        this.state = 'chase'; this.stateTimer = 1.5 + Math.random()*1.5;
+      }
+    }
+
+    switch(this.state){
+      case 'retreat':
+        if(target && this.isEasyTarget(target) && target.dist < 10){ this.state = 'chase'; this.stateTimer = .3; }
+        else if(this.hideTarget) this.moveToward(this.hideTarget, AI_MAX_SPEED*1.04);
+        break;
+      case 'roam':
+        this.moveToward(this.roamTarget, AI_MAX_SPEED*.72);
+        if(this.getPos().distanceTo(this.roamTarget) < 2){ this.roamTarget = freePoint(); this.stateTimer = 1.5; }
+        break;
+      case 'chase':
+        if(target && target.dist > 6) this.moveToward(target.pos, AI_MAX_SPEED);
+        else if(target) this.strafe(dt, target);
+        break;
+      case 'strafe':
+        if(target){
+          this.strafe(dt, target);
+          if(target.dist > 8) this.moveToward(target.pos, AI_MAX_SPEED*.7);
+        }
+        break;
+      case 'punch':
+        if(target && target.dist < PUNCH_RANGE + .8){
+          this.moveToward(target.pos, AI_MAX_SPEED);
+          this.doPunch(target.pos, target.pid);
+        } else { this.state = 'chase'; this.stateTimer = .5; }
+        break;
+    }
+
+    this.updateView(dt, target);   // 시점은 여기서만 갱신
+    this.updateCharge(dt, target);
+
+    if(this.isOnGround && this.jumpTimer<=0 && this.state==='chase' && Math.random()<.015){
+      this.jump(); this.jumpTimer = .8;
+    }
+    const s = Math.hypot(this.body.velocity.x, this.body.velocity.z);
+    if(s > AI_MAX_SPEED){
+      const f = AI_MAX_SPEED/s;
+      this.body.velocity.x *= f; this.body.velocity.z *= f;
+    }
+    clampBody(this.body);
+  }
+  updateVisuals(){
+    clampBody(this.body);
+    const show = this.alive && (gameActive || !!currentServer);
+    this.group.visible = show;
+    if(!show){ this.np.uiWrap.style.display = 'none'; return; }
+    const gp = this.group.position;
+    gp.set(this.body.position.x, this.body.position.y - PLAYER_R, this.body.position.z);
+    this.group.rotation.y = this.yaw;
+    if(this.pulse > 0){
+      this.pulse = Math.max(0, this.pulse - .016);
+      this.mat.color.lerp(HIT_COLOR_BOT, .35);
+    } else this.mat.color.setHex(PLAYER_COLOR);
+    projectNameplate(this.np, gp.x, gp.y + 1.6, gp.z, this.hp/this.maxHp);
+    const ch = this.charging;
+    if(ch !== this.chShown){ this.chShown = ch; this.np.uiCh.style.display = ch ? 'block' : 'none'; }
+    if(ch){
+      this.np.uiChFg.style.width = (this.chargeT/CHARGE_MAX*100) + '%';
+      this.np.uiChFg.style.background = this.chargeT >= CHARGE_MAX ? '#ff3b3b' : '#fff';
+    }
+  }
+  dispose(){
+    scene.remove(this.group);
+    safeRemoveBody(this.body);
+    this.np.uiWrap.remove();
+  }
+}
+
+function setAiCount(n){
+  n = clamp(Number.isFinite(n) ? n : 0, 0, 15);
+  if(currentServer) currentServer.aiCount = clamp(Math.floor(Number(n) || 0), 0, 15);
+  if(isHostNow()) sendBroadcast('server_config', { aiCount:n });
+  while(aiBots.length > n){
+    const b = aiBots.pop();
+    sendBroadcast('bot_gone', { pid:b.id });
+    b.dispose();
+  }
+  if(isHostNow()) while(aiBots.length < n) aiBots.push(new AIBot(aiBots.length));
+  renderLeaderboard();
+}
+
+// ── Remote players (다른 사람 + 서버장의 AI) ─────────────
+function createRemoteAvatar(name){
+  const av = makeBoxAvatar();
+  const np = buildNameplateDom(name);
+  np.uiWrap.style.display = 'none';
+  return {
+    group:av.group, mat:av.mat, np,
+    target:new THREE.Vector3(0,PLAYER_R,0),
+    hp:PLAYER_HP, maxHp:PLAYER_HP, alive:false, isBot:false, score:0,
+    name, lastUpdate:nowMs(), pulse:0, targetYaw:0, placed:false
+  };
+}
+function ensureRemote(pid, name){
+  let rp = remotePlayers.get(pid);
+  if(!rp){
+    rp = createRemoteAvatar(name || 'player');
+    remotePlayers.set(pid, rp);
+  }
+  if(name){ rp.name = name; rp.np.uiName.textContent = name; }
+  return rp;
+}
+function dropRemote(pid){
+  const rp = remotePlayers.get(pid);
+  if(!rp) return;
+  scene.remove(rp.group);
+  rp.np.uiWrap.remove();
+  remotePlayers.delete(pid);
+}
+function onRemoteState(p){
+  if(!p || p.pid === localPlayer.id) return;
+  if(typeof p.seq === 'number'){
+    const last = lastSeenSeq.get(p.pid) ?? -1;
+    if(p.seq <= last) return;
+    lastSeenSeq.set(p.pid, p.seq);
+  }
+  const rp = ensureRemote(p.pid, p.name);
+  if(p.name) statNames.set(p.pid, p.name);
+  if(p.isBot) rp.isBot = true;
+  if(typeof p.hp === 'number') rp.hp = p.hp;
+  if(typeof p.maxHp === 'number') rp.maxHp = p.maxHp;
+  if(typeof p.score === 'number'){ rp.score = p.score; killCounts.set(p.pid, p.score); }
+  if(typeof p.alive === 'boolean'){
+    if(!rp.alive && p.alive) rp.placed = false;
+    if(rp.alive && !p.alive) registerKill(p.pid, lastHitBy.get(p.pid));
+    rp.alive = p.alive;
+  }
+  rp.target.set(p.x||0, p.y||PLAYER_R, p.z||0);
+  if(!rp.placed){ rp.group.position.set(rp.target.x, rp.target.y - PLAYER_R, rp.target.z); rp.placed = true; }
+  rp.targetYaw = p.yaw || 0;
+  rp.lastUpdate = nowMs();
+  renderLeaderboard();
+}
+function updateRemotePlayers(dt){
+  remotePlayers.forEach(rp=>{
+    const show = rp.alive && (gameActive || !!currentServer);
+    rp.group.visible = show;
+    if(!show){ rp.np.uiWrap.style.display = 'none'; return; }
+    const gp = rp.group.position;
+    gp.x += (rp.target.x - gp.x)*.32;
+    gp.y += (rp.target.y - PLAYER_R - gp.y)*.32;
+    gp.z += (rp.target.z - gp.z)*.32;
+    rp.group.rotation.y += angDiff(rp.group.rotation.y, rp.targetYaw || 0) * Math.min(1, dt*14);
+    if(rp.pulse > 0){
+      rp.pulse = Math.max(0, rp.pulse - dt);
+      rp.mat.color.lerp(HIT_COLOR_REMOTE, .35);
+    } else rp.mat.color.setHex(PLAYER_COLOR);
+    projectNameplate(rp.np, gp.x, gp.y + 1.6, gp.z, rp.hp/rp.maxHp);
+  });
+  syncRoomInfo();
+}
+function updateRemoteCleanup(){
+  const t = nowMs();
+  if(t - lastCleanup < 1000) return;   // 초당 1회면 충분
+  lastCleanup = t;
+  for(const [pid, rp] of Array.from(remotePlayers.entries())){
+    if(t - rp.lastUpdate > 15000 && (rp.isBot || rp.alive)) dropRemote(pid);
+  }
+}
+function syncRoomInfo(){
+  const text = currentServer ? currentServer.name : '';
+  if(text === roomInfoText) return;
+  roomInfoText = text;
+  ui.roomInfo.textContent = text;
+}
+
+// ── 사격: 아주 빠른 탄 (프레임마다 이동 경로 전체를 검사, 관통 불가) ──
+function rayAABB(o, f, mn, mx, tMax){
+  let t0 = 0, t1 = tMax;
+  for(let i=0;i<3;i++){
+    const oi = i===0 ? o.x : i===1 ? o.y : o.z;
+    const fi = i===0 ? f.x : i===1 ? f.y : f.z;
+    if(Math.abs(fi) < 1e-6){
+      if(oi < mn[i] || oi > mx[i]) return -1;
+    } else {
+      let a = (mn[i]-oi)/fi, b = (mx[i]-oi)/fi;
+      if(a > b){ const tmp = a; a = b; b = tmp; }
+      if(a > t0) t0 = a;
+      if(b < t1) t1 = b;
+      if(t0 > t1) return -1;
+    }
+  }
+  return t0;
+}
+function eachTarget(fn){
+  if(localPlayer.alive) fn(localPlayer.id, playerBody.position.x, playerBody.position.y, playerBody.position.z);
+  remotePlayers.forEach((rp,pid)=>{ if(rp.alive) fn(pid, rp.target.x, rp.target.y, rp.target.z); });
+  aiBots.forEach(b=>{ if(b.alive) fn(b.id, b.body.position.x, b.body.position.y, b.body.position.z); });
+}
+function allTargets(){
+  const all = [];
+  eachTarget((pid,x,y,z)=>all.push({ pid, x, y, z }));
+  return all;
+}
+// 가장 먼저 닿는 것(벽/바닥/천장/장애물/사람)을 찾음 → 관통 없음
+function hitscan(o, f, ownerId){
+  let tHit = 300, t;
+  if(f.y < -1e-5 && (t = -o.y/f.y) > 0 && t < tHit) tHit = t;
+  if(f.y > 1e-5 && (t = (WALL_H - .3 - o.y)/f.y) > 0 && t < tHit) tHit = t;
+  if(Math.abs(f.x) > 1e-5 && (t = ((f.x>0?ARENA_HALF:-ARENA_HALF) - o.x)/f.x) > 0 && t < tHit) tHit = t;
+  if(Math.abs(f.z) > 1e-5 && (t = ((f.z>0?ARENA_HALF:-ARENA_HALF) - o.z)/f.z) > 0 && t < tHit) tHit = t;
+  for(let i=0;i<OBST_AABB.length;i++){
+    const b = OBST_AABB[i];
+    const r = rayAABB(o, f, b.mn, b.mx, tHit);
+    if(r >= 0 && r < tHit) tHit = r;
+  }
+  let pid = null;
+  eachTarget((id,x,y,z)=>{
+    if(id === ownerId) return;
+    _mn[0] = x-.56; _mn[1] = y-PLAYER_R-.1; _mn[2] = z-.56;
+    _mx[0] = x+.56; _mx[1] = y+.86;         _mx[2] = z+.56;
+    const r = rayAABB(o, f, _mn, _mx, tHit);
+    if(r >= 0 && r < tHit){ tHit = r; pid = id; }
+  });
+  return { t:tHit, pid };
+}
+function createProjectileVisual(start){
+  let mesh;
+  if(bombModelState.scene){
+    mesh = bombModelState.scene.clone(true);
+    mesh.scale.setScalar(HAND_BOMB_SCALE * 4.2);
+  } else {
+    mesh = new THREE.Mesh(FALLBACK_SHOT_GEO, FALLBACK_MAT);
+  }
+  mesh.position.copy(start);
+  mesh.userData.spin = 0;
+  scene.add(mesh);
+  return mesh;
+}
+function fireBomb(ownerId, origin, dir, charge, muzzle, rebroadcast=true){
+  const start = (muzzle || origin).clone();
+  const mesh = (gameActive || currentServer) ? createProjectileVisual(start) : null;
+  shots.push({ ownerId, start, pos:origin.clone(), dir:dir.clone(), charge, mesh, visualOnly:!rebroadcast });
+  if(rebroadcast){
+    sendBroadcast('bomb_shot', { ownerId, ox:origin.x, oy:origin.y, oz:origin.z, dx:dir.x, dy:dir.y, dz:dir.z, charge, sx:start.x, sy:start.y, sz:start.z });
+  }
+}
+function removeShotVisual(s){
+  if(!s.mesh) return;
+  scene.remove(s.mesh);   // geometry/material은 공유 자원이므로 dispose 하지 않는다
+  s.mesh = null;
+}
+function updateShots(dt){
+  for(let i = shots.length-1; i >= 0; i--){
+    const s = shots[i];
+    const step = SHOT_SPEED*dt;
+    const r = hitscan(s.pos, s.dir, s.ownerId);
+    if(r.t <= step){
+      if(s.mesh) s.mesh.position.copy(s.pos).addScaledVector(s.dir, Math.max(r.t, 0));
+      if(!s.visualOnly) resolveShot(s, r);
+      removeShotVisual(s);
+      shots.splice(i, 1);
+    } else {
+      s.pos.addScaledVector(s.dir, step);
+      if(s.mesh){
+        s.mesh.position.copy(s.pos);
+        s.mesh.rotation.x += dt*42;
+        s.mesh.rotation.y += dt*55;
+      }
+    }
+  }
+}
+function resolveShot(s, r){
+  const pt = s.pos.clone().addScaledVector(s.dir, Math.max(r.t - .05, 0));
+  const fac = MIN_CHARGE_FACTOR + (1 - MIN_CHARGE_FACTOR)*clamp(s.charge, 0, 1);
+  const hits = [];
+  allTargets().forEach(t=>{
+    if(t.pid === r.pid){
+      hits.push({ pid:t.pid, dmg:Math.max(1, Math.round(DIRECT_HIT_DAMAGE*fac)) });
+      return;
+    }
+    const d = Math.sqrt((t.x-pt.x)**2 + (t.y-pt.y)**2 + (t.z-pt.z)**2);
+    if(d <= EXPLOSION_RADIUS) hits.push({ pid:t.pid, dmg:Math.max(1, Math.round(EXPLOSION_DAMAGE*fac)) });
+  });
+  const payload = {
+    id:'s_'+makeId(), ownerId:s.ownerId, x:pt.x, y:pt.y, z:pt.z, hits,
+    sx:s.start.x, sy:s.start.y, sz:s.start.z
+  };
+  sendBroadcast('bomb_blast', payload);
+  applyBombBlast(payload);
+}
+function applyBombBlast(p){
+  if(gameActive || currentServer){
+    spawnExplosion(p.x, p.y, p.z);
+
+  }
+  const src = p.sx !== undefined ? new THREE.Vector3(p.sx, p.sy, p.sz) : new THREE.Vector3(p.x, p.y, p.z);
+  (p.hits||[]).forEach(h=> applyDamageToPid(h.pid, h.dmg, src, p.ownerId));
+}
+function spawnExplosion(x, y, z){
+  const mat = new THREE.MeshBasicMaterial({ color:0xff0000, transparent:true, opacity:.4, depthWrite:false });
+  const m = new THREE.Mesh(BLAST_GEO, mat);
+  m.position.set(x, y, z);
+  scene.add(m);
+  blastFx.push({ mesh:m, life:.55, max:.55 });
+}
+function updateBlastFx(dt){
+  for(let i = blastFx.length-1; i >= 0; i--){
+    const f = blastFx[i];
+    f.life -= dt;
+    if(f.life <= 0){
+      scene.remove(f.mesh);
+      f.mesh.material.dispose();
+      blastFx.splice(i, 1);
+      continue;
+    }
+    f.mesh.material.opacity = .4 * (f.life / f.max);
+  }
+}
+
+// ── Player actions ────────────────────────────────────────
+function updatePlayerState(dt){
+  localFireCooldown = Math.max(0, localFireCooldown - dt);
+  syncThrowCharge();
+  const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? PLAYER_RUN : PLAYER_SPEED;
+  let mx = 0, mz = 0;
+  if(keys['KeyW']||keys['ArrowUp']) mz -= 1;
+  if(keys['KeyS']||keys['ArrowDown']) mz += 1;
+  if(keys['KeyA']||keys['ArrowLeft']) mx -= 1;
+  if(keys['KeyD']||keys['ArrowRight']) mx += 1;
+  mx += jdx; mz += jdy;
+
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const wx = mx*cy + mz*sy;
+  const wz = -mx*sy + mz*cy;
+  const len = Math.hypot(wx, wz);
+
+  playerBody.wakeUp();
+  if(len > .01){
+    playerBody.velocity.x = wx/len*speed;
+    playerBody.velocity.z = wz/len*speed;
+  } else {
+    playerBody.velocity.x *= .62;
+    playerBody.velocity.z *= .62;
+  }
+  if(keys['Space']) doJump();
+
+  isOnGround = playerBody.position.y < .55 && Math.abs(playerBody.velocity.y) < 1;
+  clampBody(playerBody);
+
+  camera.position.set(playerBody.position.x, playerBody.position.y + .68, playerBody.position.z);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch;
+  camera.rotation.z = 0;
+
+  if(isCharging) chargeTime = Math.min(chargeTime + dt, CHARGE_MAX);
+  const cr = isCharging ? chargeTime/CHARGE_MAX : 0;
+  if(isCharging !== chargeShown){ chargeShown = isCharging; ui.chargeWrap.style.display = isCharging ? 'block' : 'none'; }
+  if(isCharging){
+    ui.chargeFg.style.width = (cr*100) + '%';
+    ui.chargeFg.style.background = cr >= 1 ? '#ff3b3b' : '#ffffff';
+  }
+  if(punchCooldown > 0) punchCooldown = Math.max(0, punchCooldown - dt);
+}
+function doJump(){
+  if(!localPlayer.alive || !isOnGround) return;
+  playerBody.wakeUp();
+  playerBody.velocity.y = JUMP_VEL;
+  isOnGround = false;
+}
+function spawnLocalBomb(){
+  if(!localPlayer.alive || localFireCooldown > 0) return;
+  const ratio = Math.min(chargeTime / CHARGE_MAX, 1);
+  const f = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).normalize();
+  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const muzzle = camera.position.clone().addScaledVector(right, .2).addScaledVector(f, .4).add(new THREE.Vector3(0,-.2,0));
+  fireBomb(localPlayer.id, camera.position.clone(), f, ratio, muzzle);
+  localFireCooldown = LOCAL_FIRE_COOLDOWN;
+  handSwing = 1;
+}
+function usePunch(){
+  if(!localPlayer.alive || punchCooldown > 0) return;
+  punchCooldown = .16;
+  handSwing = .55;
+  const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  fwd.y = 0; fwd.normalize();
+  const origin = new THREE.Vector3(camera.position.x, camera.position.y - .2, camera.position.z);
+  const cands = [];
+  remotePlayers.forEach((rp,pid)=>{ if(rp.alive) cands.push({ pid, pos:rp.group.position.clone().add(new THREE.Vector3(0,PLAYER_R,0)), remote:true }); });
+  aiBots.forEach(b=>{ if(b.alive) cands.push({ pid:b.id, pos:b.getPos(), remote:false }); });
+  cands.forEach(c=>{
+    const to = c.pos.clone().sub(origin);
+    if(to.length() > PUNCH_RANGE) return;
+    to.y = 0;
+    if(to.length() < .001) return;
+    to.normalize();
+    if(to.dot(fwd) <= .32) return;
+    if(c.remote){
+      sendBroadcast('punch', { from:localPlayer.id, target:c.pid, dmg:PUNCH_DAMAGE, knockX:to.x*PUNCH_KNOCKBACK, knockZ:to.z*PUNCH_KNOCKBACK });
+      const rp = remotePlayers.get(c.pid);
+      if(rp){
+        const push = to.clone().multiplyScalar(PUNCH_KNOCKBACK*.35);
+        rp.target.x += push.x; rp.target.z += push.z;
+      }
+    }
+    applyDamageToPid(c.pid, PUNCH_DAMAGE, origin, localPlayer.id);
+  });
+}
+function handlePunch(p){
+  if(!p || p.from === localPlayer.id) return;
+  if(p.target === localPlayer.id){
+    damageLocalPlayer(p.dmg || PUNCH_DAMAGE, p.from, getEntityPosition(p.from));
+    return;
+  }
+  if(aiBots.some(b=>b.id===p.target)){          // 서버장: 내 AI가 맞음
+    applyDamageToPid(p.target, p.dmg || PUNCH_DAMAGE, null, p.from);
+    return;
+  }
+  const rp = remotePlayers.get(p.target);
+  if(!rp || !rp.alive) return;
+  rp.target.x += (p.knockX||0)*.05;
+  rp.target.z += (p.knockZ||0)*.05;
+  applyDamageToPid(p.target, p.dmg || PUNCH_DAMAGE, null, p.from);
+}
+function updateHand(dt){
+  handGroup.visible = gameActive && localPlayer.alive;
+  localShadowGroup.visible = handGroup.visible;
+  localShadowGroup.position.copy(playerBody.position);
+  handShadowProxy.visible = handGroup.visible;
+  handModel.updateWorldMatrix(true, true);
+  handShadowProxy.matrix.copy(handModel.matrixWorld);
+  handShadowProxy.matrixWorldNeedsUpdate = true;
+  if(handSwing > 0){
+    handSwing -= dt*5;
+    handModel.rotation.x = .1 + Math.max(0, handSwing)*.6;
+    handModel.position.z = -.35 - Math.max(0, handSwing)*.08;
+  } else {
+    const t = performance.now()*(isCharging ? .012 : .004);
+    handModel.position.set(.22 + Math.sin(t*(isCharging?5:1))*(isCharging?.004:.006), -.22 + Math.sin(t*(isCharging?7:2))*.003, -.35);
+    handModel.rotation.set(.1, .3, .05);
+  }
+}
+
+// ── Controls ──────────────────────────────────────────────
+function isControlTarget(el){
+  return !!(el && el.closest && el.closest('#joy-area,#throw-btn,#jump-btn,#punch-btn,#menu-row,#server-page,#settings-panel,#settings-btn,#toast'));
+}
+let joyActive = false, joyId = null, jdx = 0, jdy = 0;
+function moveJoy(cx, cy){
+  const r = ui.joyBase.getBoundingClientRect();
+  const dx = cx - (r.left + r.width/2);
+  const dy = cy - (r.top + r.height/2);
+  const maxR = 42;
+  const dist = Math.min(maxR, Math.hypot(dx, dy));
+  const ang = Math.atan2(dy, dx);
+  const kx = Math.cos(ang)*dist, ky = Math.sin(ang)*dist;
+  ui.joyKnob.style.transform = 'translate(calc(-50% + '+kx+'px), calc(-50% + '+ky+'px))';
+  jdx = kx/maxR; jdy = ky/maxR;
+}
+ui.joyBase.addEventListener('touchstart', e=>{
+  e.stopPropagation(); e.preventDefault();
+  const t = e.changedTouches[0];
+  joyActive = true; joyId = t.identifier;
+  moveJoy(t.clientX, t.clientY);
+}, { passive:false });
+let lookActive = false, lookId = null, lookX = 0, lookY = 0;
+window.addEventListener('touchstart', e=>{
+  if(!gameActive || isControlTarget(e.target)) return;
+  const t = e.changedTouches[0];
+  lookActive = true; lookId = t.identifier; lookX = t.clientX; lookY = t.clientY;
+}, { passive:true });
+window.addEventListener('touchmove', e=>{
+  if(!(e.target.closest && e.target.closest('#server-page,#settings-panel'))) e.preventDefault();
+  for(const t of e.changedTouches){
+    if(joyActive && t.identifier === joyId){ moveJoy(t.clientX, t.clientY); continue; }
+    if(lookActive && gameActive && t.identifier === lookId){
+      yaw -= (t.clientX - lookX)*sensitivity;
+      pitch = clamp(pitch - (t.clientY - lookY)*sensitivity, -PITCH_LIMIT, PITCH_LIMIT);
+      lookX = t.clientX; lookY = t.clientY;
+    }
+  }
+}, { passive:false });
+function endTouches(e){
+  for(const t of e.changedTouches){
+    if(t.identifier === joyId){
+      joyActive = false; joyId = null; jdx = 0; jdy = 0;
+      ui.joyKnob.style.transform = 'translate(-50%,-50%)';
+    }
+    if(t.identifier === lookId){ lookActive = false; lookId = null; }
+  }
+}
+window.addEventListener('touchend', endTouches);
+window.addEventListener('touchcancel', endTouches);
+function syncThrowCharge(){
+  if(throwHeld && localPlayer.alive && localFireCooldown <= 0 && !isCharging){
+    isCharging = true;
+    chargeTime = 0;
+  }
+}
+function beginThrow(){
+  if(!gameActive || !localPlayer.alive) return;
+  throwHeld = true;
+  syncThrowCharge();
+}
+function releaseThrow(){
+  if(throwHeld && isCharging && gameActive && localPlayer.alive && localFireCooldown <= 0) spawnLocalBomb();
+  throwHeld = false;
+  isCharging = false;
+  chargeTime = 0;
+}
+function bindTouch(btn, fn){
+  btn.addEventListener('touchstart', e=>{ e.stopPropagation(); e.preventDefault(); fn(); }, { passive:false });
+  btn.addEventListener('pointerdown', e=>{ if(e.pointerType !== 'touch') fn(); });
+}
+ui.throwBtn.addEventListener('touchstart', e=>{
+  e.stopPropagation(); e.preventDefault();
+  beginThrow();
+}, { passive:false });
+ui.throwBtn.addEventListener('touchend', e=>{ e.stopPropagation(); e.preventDefault(); releaseThrow(); }, { passive:false });
+ui.throwBtn.addEventListener('pointerdown', e=>{
+  if(e.pointerType === 'mouse' || e.pointerType === 'pen') beginThrow();
+});
+ui.throwBtn.addEventListener('pointerup', releaseThrow);
+bindTouch(ui.jumpBtn, doJump);
+bindTouch(ui.punchBtn, usePunch);
+
+function updateControlsVis(){
+  const locked = document.pointerLockElement === renderer.domElement;
+  const show = gameActive && isMobile && !locked;
+  ui.controls.style.display = show ? 'block' : 'none';
+  document.body.classList.toggle('touch-ui', show);   // 설정 버튼이 조이스틱을 가리지 않도록 위치 조정
+}
+document.addEventListener('pointerlockchange', updateControlsVis);
+document.addEventListener('mousemove', e=>{
+  if(document.pointerLockElement !== renderer.domElement || !gameActive) return;
+  yaw -= e.movementX*sensitivity;
+  pitch = clamp(pitch - e.movementY*sensitivity, -PITCH_LIMIT, PITCH_LIMIT);
+});
+renderer.domElement.addEventListener('mousedown', e=>{
+  if(!gameActive || !localPlayer.alive) return;
+  if(document.pointerLockElement !== renderer.domElement){ renderer.domElement.requestPointerLock(); return; }
+  if(e.button === 0) beginThrow();
+});
+renderer.domElement.addEventListener('mouseup', e=>{ if(e.button === 0) releaseThrow(); });
+window.addEventListener('keydown', e=>{
+  if(e.code === 'Escape' && ui.settingsPanel.style.display === 'flex'){
+    closeSettings();
+    return;
+  }
+  const tg = e.target;
+  if(tg && (tg.tagName === 'INPUT' || tg.tagName === 'SELECT' || tg.tagName === 'TEXTAREA')) return;
+  keys[e.code] = true;
+  if(e.code === 'Space') e.preventDefault();
+  if(e.code === 'KeyF' && gameActive) usePunch();
+});
+window.addEventListener('keyup', e=>{ keys[e.code] = false; });
+
+// ── Network ───────────────────────────────────────────────
+function sendBroadcast(event, payload){
+  if(channel && netReady) channel.send({ type:'broadcast', event, payload });
+}
+function sendState(){
+  if(!channel || !netReady) return;
+  sendBroadcast('state', {
+    pid:localPlayer.id, name:localPlayer.name, color:PLAYER_COLOR_STR,
+    x:playerBody.position.x, y:playerBody.position.y, z:playerBody.position.z,
+    yaw, pitch, hp:playerHP, maxHp:PLAYER_HP, alive:localPlayer.alive,
+    score, seq:++seq, ts:Date.now()
+  });
+}
+function sendBots(){
+  if(!aiBots.length) return;
+  sendBroadcast('bots', { list: aiBots.map(b=>({
+    pid:b.id, name:b.name, isBot:true,
+    x:b.body.position.x, y:Math.max(b.body.position.y, .1), z:b.body.position.z,
+    yaw:b.yaw, hp:b.hp, maxHp:b.maxHp, alive:b.alive, score:b.score || 0, seq:++seq
+  })) });
+}
+function updateNetwork(dt){
+  if(!channel || !netReady) return;
+  sendAccumulator += dt;
+  if(sendAccumulator >= NETWORK_SEND_MS/1000){
+    sendAccumulator = 0;
+    if(gameActive) sendState();
+    if(isHostNow()) sendBots();
+  }
+}
+let roomSynced = false;
+let trackedHostState = null;
+const presenceNames = new Map();
+function refreshPresenceCache(){
+  if(!channel) return;
+  presenceCache.clear(); presenceNames.clear();
+  Object.values(channel.presenceState()||{}).forEach(arr=>arr.forEach(p=>{
+    if(p.pid){
+      presenceCache.set(p.pid, p);
+      presenceNames.set(p.pid, p.name);
+      if(p.pid !== localPlayer.id) ensureRemote(p.pid, p.name);
+    }
+  }));
+  for(const [pid, rp] of Array.from(remotePlayers.entries())){
+    if(!rp.isBot && !presenceCache.has(pid)) dropRemote(pid);
+  }
+  // 참가자 입장·퇴장 토스트는 표시하지 않습니다.
+  reconcilePublicHost();
+  syncBotsWithHost();
+  syncRoomInfo();
+  updateMenuUI();
+  renderLeaderboard();
+  announceServer();
+}
+function trackPresence(){
+  if(!channel || !netReady) return Promise.resolve();
+  if(currentServer && !currentServer.joinedAt) currentServer.joinedAt = Date.now();
+  return channel.track({ pid:localPlayer.id, name:localPlayer.name, color:PLAYER_COLOR_STR, host:isHostNow(), joinedAt:currentServer?.joinedAt || Date.now() });
+}
+function reconcilePublicHost(){
+  if(!shouldElectPublicHost()) return;
+  // presenceState에 로컬 항목이 이미 있을 수 있으므로 중복해서 넣지 않습니다.
+  const byPid = new Map();
+  for(const p of presenceCache.values()) if(p && p.pid) byPid.set(p.pid, p);
+  if(!byPid.has(localPlayer.id)) byPid.set(localPlayer.id, {
+    pid:localPlayer.id, joinedAt:currentServer.joinedAt || Date.now()
+  });
+  const members = Array.from(byPid.values());
+  members.sort((a,b)=>(Number(a.joinedAt)||0) - (Number(b.joinedAt)||0) || String(a.pid).localeCompare(String(b.pid)));
+  const elected = members[0]?.pid || localPlayer.id;
+  currentServer.hostId = elected;
+  currentServer.isHost = elected === localPlayer.id;
+  // 최초 입장자 선출 결과를 presence 메타데이터에도 반영해 후발 입장자가 같은 서버장을 봅니다.
+  const hostState = currentServer.isHost;
+  if(channel && netReady && trackedHostState !== hostState){
+    trackedHostState = hostState;
+    channel.track({ pid:localPlayer.id, name:localPlayer.name, color:PLAYER_COLOR_STR, host:hostState, joinedAt:currentServer.joinedAt || Date.now() });
+  }
+}
+let botHostFlag = false;
+function syncBotsWithHost(){
+  if(!currentServer) return;
+  const host = isHostNow();
+  if(host){
+    if(!botHostFlag){
+      remotePlayers.forEach((rp,pid)=>{ if(rp.isBot) dropRemote(pid); });
+    }
+    const want = clamp(currentServer.aiCount ?? 0, 0, 15);
+    if(aiBots.length !== want) setAiCount(want);
+  } else if(aiBots.length){
+    while(aiBots.length) aiBots.pop().dispose();
+  }
+  botHostFlag = host;
+}
+
+function connectRoom(srv){
+  return new Promise((resolve, reject)=>{
+    let done = false;
+    const ch = supabase.channel('gunbam:'+srv.code, { config:{ presence:{ key:localPlayer.id } } });
+    channel = ch; roomSynced = false; trackedHostState = null;
+    const fail = err=>{
+      if(done) return; done = true; clearTimeout(timer);
+      try{ supabase.removeChannel(ch); }catch{}
+      if(channel === ch){ channel = null; netReady = false; }
+      reject(err);
+    };
+    const timer = setTimeout(()=>fail(new Error('timeout')), 9000);
+    ch
+      .on('presence', { event:'sync' }, refreshPresenceCache)
+      .on('presence', { event:'join' }, refreshPresenceCache)
+      .on('presence', { event:'leave' }, refreshPresenceCache)
+      .on('broadcast', { event:'state' }, ({payload})=>onRemoteState(payload))
+      .on('broadcast', { event:'bots' }, ({payload})=>{ (payload.list||[]).forEach(onRemoteState); })
+      .on('broadcast', { event:'bot_gone' }, ({payload})=>{ if(payload) dropRemote(payload.pid); })
+      .on('broadcast', { event:'bomb_shot' }, ({payload})=>{
+        if(!payload || payload.ownerId === localPlayer.id) return;
+        fireBomb(payload.ownerId, new THREE.Vector3(payload.ox, payload.oy, payload.oz), new THREE.Vector3(payload.dx, payload.dy, payload.dz), payload.charge || 0, new THREE.Vector3(payload.sx, payload.sy, payload.sz), false);
+      })
+      .on('broadcast', { event:'server_config' }, ({payload})=>{
+        if(!payload || !currentServer || typeof payload.aiCount !== 'number') return;
+        currentServer.aiCount = clamp(payload.aiCount, 0, 15);
+        if(!isHostNow()) setAiCount(currentServer.aiCount);
+        renderCurrentServer();
+      })
+      .on('broadcast', { event:'bomb_blast' }, ({payload})=>applyBombBlast(payload))
+      .on('broadcast', { event:'punch' }, ({payload})=>handlePunch(payload))
+      .subscribe(async (status)=>{
+        if(status === 'SUBSCRIBED'){
+          netReady = true;
+          await trackPresence();
+          refreshPresenceCache();
+          if(!done){ done = true; clearTimeout(timer); resolve(); }
+        } else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
+          fail(new Error(status));
+        }
+      });
+  });
+}
+
+// ── 서버 시스템: 서버를 만들고, 서버에 들어온다 ──────────
+let lobby = null, lobbyReady = false;
+let serverList = [];
+function initLobby(){
+  lobby = supabase.channel('gunbam-lobby', { config:{ presence:{ key:localPlayer.id } } });
+  lobby.on('presence', { event:'sync' }, ()=>{
+    const announced = [];
+    Object.values(lobby.presenceState()||{}).forEach(arr=>arr.forEach(p=>{ if(p.code) announced.push(p); }));
+    // 고정 서버 항목보다 최신 lobby 공지를 우선해 선출된 서버장 이름을 표시합니다.
+    const announcedByCode = new Map(announced.map(p=>[p.code, p]));
+    serverList = PUBLIC_SERVERS.map(pub=>announcedByCode.get(pub.code) ? { ...pub, ...announcedByCode.get(pub.code) } : pub);
+    serverList.push(...announced.filter(p=>!PUBLIC_SERVERS.some(pub=>pub.code === p.code)));
+    renderServerList();
+  }).subscribe(status=>{
+    lobbyReady = status === 'SUBSCRIBED';
+    if(lobbyReady) announceServer();
+    renderServerList();
+  });
+}
+let lastAnnounce = '';
+function announceServer(){
+  if(!lobbyReady || !currentServer || !currentServer.isHost) return;
+  const info = { code:currentServer.code, name:currentServer.name, hostName:localPlayer.name, hostId:localPlayer.id, count:Math.max(1, presenceCache.size), aiCount:currentServer.aiCount ?? 0, public:!!currentServer.public, electHost:!!currentServer.electHost };
+  const key = JSON.stringify(info);
+  if(key === lastAnnounce) return;
+  lastAnnounce = key;
+  lobby.track(info);
+}
+function syncName(){
+  localPlayer.name = (ui.nameIn.value.trim() || 'player').slice(0,6);
+  statNames.set(localPlayer.id, localPlayer.name);
+  lsSet('gb_name', localPlayer.name);
+}
+async function createServer(name){
+  syncName();
+  resetServerStats();
+  const cleanName = name.trim();
+  if(!SERVER_NAME_RE.test(cleanName)) throw new Error('서버 이름은 한글·영문·숫자만 5글자 이하로 입력해 주세요.');
+  const code = Math.random().toString(36).slice(2,6).toUpperCase();
+  currentServer = { code, name:cleanName, hostId:localPlayer.id, isHost:true, aiCount:0, public:false };
+  lastAnnounce = '';
+  try{
+    await connectRoom(currentServer);
+  }catch(e){
+    currentServer = null; updateMenuUI(); throw e;
+  }
+  announceServer();
+  updateMenuUI();
+}
+async function joinServer(s){
+  syncName();
+  if(currentServer) leaveServer();
+  resetServerStats();
+  currentServer = { code:s.code, name:s.name, hostId:s.hostId, isHost:false, aiCount:clamp(Math.floor(Number(s.aiCount) || 0), 0, 15), public:!!s.public, electHost:!!s.electHost, joinedAt:Date.now() };
+  // 서버 3은 방에 가장 먼저 들어온 사용자가 해당 세션의 서버장이 된다.
+  try{
+    await connectRoom(currentServer);
+  }catch(e){
+    currentServer = null; updateMenuUI(); throw e;
+  }
+  updateMenuUI();
+}
+function leaveServer(resetStats=true){
+  const wasHost = isHostNow();
+  if(resetStats) resetServerStats();
+  setAiCount(0);
+  aiBots.length = 0;
+  remotePlayers.forEach((rp,pid)=>dropRemote(pid));
+  if(channel){
+    try{ channel.untrack(); supabase.removeChannel(channel); }catch{}
+  }
+  channel = null; netReady = false; roomSynced = false; trackedHostState = null;
+  presenceCache.clear(); presenceNames.clear();
+  if(wasHost && lobby){ try{ lobby.untrack(); }catch{} lastAnnounce = ''; }
+  botHostFlag = false;
+  currentServer = null;
+  updateMenuUI();
+}
+
+// ── 메인 화면 / 서버 페이지 UI ───────────────────────────
+let toastTimer = null;
+function toast(msg){
+  ui.toast.textContent = msg;
+  ui.toast.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ ui.toast.style.opacity = '0'; }, 2200);
+}
+function updateMenuUI(){
+  ui.serverLabel.textContent = currentServer ? currentServer.name : '서버 1';
+  ui.aiBox.style.display = 'none';
+  const createArea = ui.spName.closest('.sp-create');
+  // 관리창이 표시되는 서버에서는 서버 생성창을 동시에 표시하지 않습니다.
+  if(createArea) createArea.style.display = hasServerManagement() ? 'none' : 'flex';
+  if(currentServer){
+    const names = Array.from(presenceCache.values()).filter(p=>p.pid !== localPlayer.id).map(p=>hasServerManagement() ? p.name + (p.host ? ' (서버장)' : '') : p.name);
+    ui.menuMembers.textContent = names.join(' · ');
+  } else ui.menuMembers.textContent = '';
+  renderCurrentServer();
+}
+function renderCurrentServer(){
+  ui.spCurrent.innerHTML = '';
+  // 서버 3과 비공개 서버만 서버장 관리 UI를 사용합니다.
+  if(!hasServerManagement()) return;
+  const box = document.createElement('div'); box.className = 'sp-current';
+  const info = document.createElement('div');
+  info.innerHTML = '<div class="sub" style="font-size:11px;color:#aaa">현재 서버</div>';
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.style.fontWeight = '700'; nm.textContent = currentServer.name + (currentServer.isHost ? ' (서버장)' : '');
+  info.appendChild(nm);
+  const actions = document.createElement('div'); actions.style.display = 'flex'; actions.style.alignItems = 'center'; actions.style.gap = '8px';
+  if(currentServer.isHost){
+    const aiLabel = document.createElement('label'); aiLabel.className = 'sub'; aiLabel.textContent = 'AI';
+    const aiSelect = document.createElement('select'); aiSelect.className = 'sp-btn ghost'; aiSelect.style.padding = '8px 10px';
+    for(let i=0;i<=15;i++){ const option = document.createElement('option'); option.value = String(i); option.textContent = String(i); option.selected = i === (currentServer.aiCount ?? 0); aiSelect.appendChild(option); }
+    aiSelect.addEventListener('change', ()=>setAiCount(parseInt(aiSelect.value, 10)));
+    actions.appendChild(aiLabel); actions.appendChild(aiSelect);
+  }
+  const b = document.createElement('button'); b.className = 'sp-btn ghost'; b.textContent = '나가기';
+  b.onclick = ()=>{ leaveServer(); toast('서버에서 나갔습니다'); renderServerList(); };
+  actions.appendChild(b);
+  box.appendChild(info); box.appendChild(actions);
+  ui.spCurrent.appendChild(box);
+}
+function renderServerList(){
+  const list = ui.spList;
+  list.innerHTML = '';
+  if(!serverList.length){
+    const e = document.createElement('div'); e.className = 'sp-empty';
+    e.textContent = lobbyReady ? '열린 서버가 없습니다' : '서버 목록을 불러오는 중...';
+    list.appendChild(e);
+    return;
+  }
+  serverList.forEach(s=>{
+    const row = document.createElement('div'); row.className = 'sp-item';
+    const info = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = s.name;
+    const sub = document.createElement('div'); sub.className = 'sub';
+    const serverType = s.code === 'public-3' ? '서버장 ' + (s.hostName || '선출 중') : (!s.public ? '서버장 ' + s.hostName : '');
+    sub.textContent = [serverType, 'AI ' + (s.aiCount ?? 0) + '명', (s.count || 0) + '명'].filter(Boolean).join(' · ');
+    info.appendChild(nm); info.appendChild(sub);
+    const btn = document.createElement('button'); btn.className = 'sp-btn';
+    const mine = currentServer && currentServer.code === s.code;
+    btn.textContent = mine ? '입장중' : '입장';
+    btn.disabled = !!mine || busy;
+    btn.onclick = ()=>withBusy(async ()=>{
+      await joinServer(s);
+      closeServerPage();
+    });
+    row.appendChild(info); row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+let busy = false;
+async function withBusy(fn){
+  if(busy) return;
+  busy = true; ui.playBtn.disabled = true; ui.spCreate.disabled = true;
+  ui.menuMsg.textContent = '연결 중...';
+  try{
+    await fn();
+    ui.menuMsg.textContent = '';
+  }catch{
+    ui.menuMsg.textContent = '연결 실패';
+    toast('연결 실패');
+  }finally{
+    busy = false; ui.playBtn.disabled = false; ui.spCreate.disabled = false;
+    renderServerList();
+  }
+}
+function openServerPage(){
+  ui.spName.value = '';
+  ui.serverPage.style.display = 'flex';
+  renderCurrentServer();
+  renderServerList();
+}
+function closeServerPage(){ ui.serverPage.style.display = 'none'; }
+
+function openSettings(){
+  ui.settingsPanel.style.display = 'flex';
+  if(document.pointerLockElement) document.exitPointerLock();
+}
+function closeSettings(){ ui.settingsPanel.style.display = 'none'; }
+function returnToMainMenu(){
+  closeSettings();
+  // 메인화면으로 돌아가도 서버 presence는 유지합니다. 서버에서 나가는 동작은
+  // 서버 페이지의 '나가기' 버튼을 눌렀을 때만 수행됩니다.
+  if(gameActive) setPlaying(false);
+  if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+  ui.menuMsg.classList.remove('death-message');
+  ui.menuMsg.textContent = '';
+}
+ui.mainMenuBtn.addEventListener('click', returnToMainMenu);
+function updateSensitivity(rawValue){
+  const value = Number(rawValue);
+  if(!Number.isFinite(value)) return;
+  sensitivity = clamp(value, .001, .1);
+  ui.sensitivityValue.textContent = sensitivity.toFixed(3);
+  saveSensitivity(sensitivity);
+}
+ui.settingsBtn.addEventListener('click', openSettings);
+ui.settingsClose.addEventListener('click', closeSettings);
+ui.settingsPanel.addEventListener('click', e=>{ if(e.target === ui.settingsPanel) closeSettings(); });
+ui.sensitivity.addEventListener('input', e=>updateSensitivity(e.target.value));
+
+ui.serverBtn.addEventListener('click', openServerPage);
+ui.spBack.addEventListener('click', closeServerPage);
+ui.spCreate.addEventListener('click', ()=>withBusy(async ()=>{
+  const name = ui.spName.value.trim();
+  if(!SERVER_NAME_RE.test(name)){
+    toast('서버 이름은 한글·영문·숫자만 5글자 이하로 입력해 주세요');
+    return;
+  }
+  if(currentServer) leaveServer();
+  await createServer(name);
+  closeServerPage();
+  toast('서버를 만들었습니다');
+}));
+ui.nameIn.addEventListener('input', ()=>{ if(ui.nameIn.value.length > 6) ui.nameIn.value = ui.nameIn.value.slice(0,6); });
+ui.nameIn.addEventListener('change', ()=>{ syncName(); trackPresence(); announceServer(); });
+ui.playBtn.addEventListener('click', ()=>withBusy(async ()=>{
+  requestGameFullscreen();
+  syncName();
+  if(!currentServer) await joinServer(PUBLIC_SERVERS[0]);
+  else trackPresence();
+  startMatch();
+}));
+
+function setPlaying(on){
+  gameActive = on;
+  document.body.classList.toggle('menu', !on);
+  ui.menu.style.display = on ? 'none' : 'flex';
+  camera.fov = on ? 75 : 60;
+  camera.updateProjectionMatrix();
+  if(!on){
+    // 전투에서만 이탈한 상태를 서버에 알리고 presence는 유지합니다.
+    localPlayer.alive = false;
+    if(channel && netReady) sendState();
+    safeRemoveBody(playerBody);
+    throwHeld = false; isCharging = false; chargeTime = 0;
+    ui.chargeWrap.style.display = 'none'; chargeShown = false;
+    clearHitIndicators();
+    if(document.pointerLockElement) document.exitPointerLock();
+  }
+  updateControlsVis();
+}
+function startMatch(){
+  ui.menuMsg.classList.remove('death-message');
+  ui.menuMsg.textContent = '';
+  score = 0;
+  if(!killCounts.has(localPlayer.id)) killCounts.set(localPlayer.id, 0);
+  hpRegenCooldown = 0;
+  localFireCooldown = 0;
+  setPlaying(true);
+  respawnLocalPlayer();
+  updateHUD();
+}
+
+async function requestGameFullscreen(){
+  if(document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+  try{ await document.documentElement.requestFullscreen(); }
+  catch{ /* 브라우저가 전체화면을 지원하지 않으면 게임은 계속 진행 */ }
+}
+
+// ── Main loop ─────────────────────────────────────────────
+let lastTime = nowMs();
+let perfFrames = 0, perfElapsed = 0, perfFps = 0, perfWt = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  const now = nowMs();
+  const dt = Math.min((now - lastTime)/1000, .05);
+  lastTime = now;
+
+  if(gameActive){
+    updatePlayerState(dt);
+    updateHealthRegen(dt);
+  } else {
+    // 드론 뷰: 맵을 위에서 돌면서 보여줌
+    droneAngle += dt*.18;
+    camera.position.set(Math.cos(droneAngle)*36, 27, Math.sin(droneAngle)*36);
+    camera.lookAt(0, 0, 0);
+  }
+  const worldStart = performance.now();
+  world.step(1/90, dt, 4);
+  perfWt = performance.now() - worldStart;
+  perfFrames++;
+  perfElapsed += dt;
+  if(perfElapsed >= .5){
+    perfFps = Math.round(perfFrames / perfElapsed);
+    perfFrames = 0; perfElapsed = 0;
+    ui.perfStats.textContent = 'FPS ' + perfFps + ' · WT ' + perfWt.toFixed(1) + 'ms';
+  }
+  if(gameActive) clampBody(playerBody);
+  if(isHostNow()) aiBots.forEach(b=>b.update(dt));
+  aiBots.forEach(b=>b.updateVisuals());
+  updateShots(dt);
+  updateRemotePlayers(dt);
+  updateBlastFx(dt);
+  updateHitIndicators(dt);
+  updateHand(dt);
+  updateRemoteCleanup();
+  updateNetwork(dt);
+  flushLeaderboard(now);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('beforeunload', ()=>{
+  try{ if(channel) channel.untrack(); if(lobby) lobby.untrack(); }catch{}
+});
+window.addEventListener('resize', ()=>{
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime:{ params:{ eventsPerSecond:40 } } });
+syncName();
+serverList = [...PUBLIC_SERVERS];
+initLobby();
+updateMenuUI();
+updateHUD();
+// 게임을 열면 항상 서버 1에 먼저 가입한다.
+withBusy(async ()=>{ await joinServer(PUBLIC_SERVERS[0]); });
+animate();
+</script>
+</body>
+</html>
